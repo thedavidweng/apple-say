@@ -13,6 +13,7 @@ import Testing
     var captureSucceeds = false
     var captureError: SpeechError?
     var waitsUntilStopped = false
+    var writesWrongContainer = false
     let availableVoices = [Voice(id: "standard", name: "Standard", language: "en_US"),
                            Voice(id: "personal", name: "Personal", language: "en_US", isPersonal: true)]
     var availableCapabilities = SpeechCapabilities(outputs: [.init(container: .caf, profiles: [
@@ -43,12 +44,19 @@ import Testing
         let natural = durations[request.text] ?? 0.2
         let duration = natural * 175 / Double(request.settings.speed)
         let format = AVAudioFormat(standardFormatWithSampleRate: AudioFiles.sampleRate, channels: 1)!
-        let file = try AVAudioFile(forWriting: destination, settings: format.settings)
+        let source = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".caf")
+        defer { try? FileManager.default.removeItem(at: source) }
+        let file = try AVAudioFile(forWriting: source, settings: format.settings)
         let frames = AVAudioFrameCount((duration * format.sampleRate).rounded())
         let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames)!
         buffer.frameLength = frames
         for index in 0..<Int(frames) { buffer.floatChannelData![0][index] = 0.2 }
         try file.write(from: buffer)
+        if writesWrongContainer {
+            try Data(contentsOf: source).write(to: destination)
+            return
+        }
+        try AudioFiles.convert(source, to: destination, settings: request.output)
     }
 }
 
@@ -405,18 +413,70 @@ import Testing
     @Test func systemAudioConversionProducesRequestedCompressedArtifact() throws {
         let system = TestSpeechSystem()
         let source = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".caf")
-        let destination = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".m4a")
+        defer { try? FileManager.default.removeItem(at: source) }
+        try system.speakSynchronouslyForTest(text: "Audio", destination: source)
+        var m4a = ExportSettings(container: .m4a)
+        m4a.dataFormat = "aac"
+        m4a.bitRate = 128_000
+        m4a.quality = 96
+        var aiff = ExportSettings(container: .aiff)
+        aiff.dataFormat = "BEI16"
+        var caf = ExportSettings(container: .caf)
+        caf.dataFormat = "LEF32"
+        var wav = ExportSettings(container: .wav)
+        wav.dataFormat = "LEI16"
+        for output in [aiff, caf, wav, m4a] {
+            let destination = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString + "." + output.container.rawValue)
+            defer { try? FileManager.default.removeItem(at: destination) }
+            try AudioFiles.convert(source, to: destination, settings: output)
+            try AudioFiles.validate(destination, settings: output)
+            #expect(try AudioFiles.duration(of: destination) > 0)
+        }
+    }
+
+    @Test func exportRejectsMismatchedArtifactWithoutReplacingDestination() async throws {
+        let system = TestSpeechSystem()
+        system.writesWrongContainer = true
+        system.availableCapabilities.outputs = [OutputCapability(container: .wav, profiles: [
+            AudioDataCapability(dataFormat: "LEI16", channels: [1])
+        ])]
+        let controller = SpeechController(system: system)
+        try await controller.refresh()
+        let destination = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".wav")
+        let existing = Data("existing audio".utf8)
+        try existing.write(to: destination)
+        defer { try? FileManager.default.removeItem(at: destination) }
+
+        await #expect(throws: SpeechError.self) {
+            try await controller.export(text: "Wrong container", settings: .init(),
+                                        output: .init(container: .wav), to: destination)
+        }
+        #expect(try Data(contentsOf: destination) == existing)
+        #expect(controller.lastResult == nil)
+    }
+
+    @Test func audioArtifactValidationRejectsWrongEncodingAndChannelCount() throws {
+        let system = TestSpeechSystem()
+        let source = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".caf")
+        let destination = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".wav")
         defer {
             try? FileManager.default.removeItem(at: source)
             try? FileManager.default.removeItem(at: destination)
         }
         try system.speakSynchronouslyForTest(text: "Audio", destination: source)
-        var output = ExportSettings(container: .m4a)
-        output.dataFormat = "aac"
-        output.bitRate = 128_000
-        output.quality = 96
-        try AudioFiles.convert(source, to: destination, settings: output)
-        #expect(try AudioFiles.duration(of: destination) > 0)
+        var floatOutput = ExportSettings(container: .wav)
+        floatOutput.dataFormat = "LEF32"
+        try AudioFiles.convert(source, to: destination, settings: floatOutput)
+
+        #expect(throws: SpeechError.self) {
+            try AudioFiles.validate(destination, settings: .init(container: .wav))
+        }
+        var stereoFloatOutput = floatOutput
+        stereoFloatOutput.channels = 2
+        #expect(throws: SpeechError.self) {
+            try AudioFiles.validate(destination, settings: stereoFloatOutput)
+        }
     }
 
     @Test func plainTextPreviewPreservesArbitraryInput() async throws {

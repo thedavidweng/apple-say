@@ -14,6 +14,39 @@ enum AudioFiles {
         return Double(file.length) / file.processingFormat.sampleRate
     }
 
+    static func validate(_ url: URL, settings: ExportSettings) throws {
+        let file = try AVAudioFile(forReading: url)
+        guard file.length > 0 else { throw SpeechError.emptyAudio }
+
+        var audioFile: AudioFileID?
+        try check(AudioFileOpenURL(url as CFURL, .readPermission, 0, &audioFile))
+        guard let audioFile else { throw SpeechError.emptyAudio }
+        defer { AudioFileClose(audioFile) }
+
+        var actualType = AudioFileTypeID()
+        var typeSize = UInt32(MemoryLayout<AudioFileTypeID>.size)
+        try check(AudioFileGetProperty(audioFile, kAudioFilePropertyFileFormat, &typeSize, &actualType))
+        guard actualType == fileType(settings.container) else {
+            throw SpeechError.processFailed("The exported audio container does not match the selected format.")
+        }
+
+        let actual = file.fileFormat.streamDescription.pointee
+        if let channels = settings.channels, actual.mChannelsPerFrame != UInt32(channels) {
+            throw SpeechError.processFailed("The exported audio channel count does not match the selected setting.")
+        }
+        let expected = try outputFormat(settings, channels: actual.mChannelsPerFrame)
+        guard actual.mFormatID == expected.mFormatID else {
+            throw SpeechError.processFailed("The exported audio data format does not match the selected setting.")
+        }
+        if expected.mFormatID == kAudioFormatLinearPCM {
+            let relevantFlags = AudioFormatFlags(kAudioFormatFlagIsFloat | kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsBigEndian)
+            guard actual.mBitsPerChannel == expected.mBitsPerChannel,
+                  actual.mFormatFlags & relevantFlags == expected.mFormatFlags & relevantFlags else {
+                throw SpeechError.processFailed("The exported PCM representation does not match the selected setting.")
+            }
+        }
+    }
+
     static func assemble(_ clips: [(url: URL, start: Double)], to destination: URL, endingAt: Double) throws {
         let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1)!
         let output = try AVAudioFile(forWriting: destination, settings: format.settings)

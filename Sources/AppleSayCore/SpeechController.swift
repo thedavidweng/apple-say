@@ -159,7 +159,7 @@ public struct AudioPlacement: Equatable, Sendable {
         }
         try Task.checkCancellation()
         if let destination {
-            _ = try AudioFiles.duration(of: artifact)
+            try AudioFiles.validate(artifact, settings: output!)
             try publish(artifact, to: destination)
         }
         lastResult = SpeechResult(format: document.format, destination: destination, placements: placements,

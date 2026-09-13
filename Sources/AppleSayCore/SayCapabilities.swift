@@ -158,7 +158,7 @@ enum SayArguments {
                 throw SpeechError.invalidSettings("Output devices and network audio apply to Preview only.")
             }
             arguments += ["-o", destination.path, "--file-format=\(request.output.container.sayFormat)"]
-            if let format = request.output.dataFormat { arguments += ["--data-format=\(format)"] }
+            arguments += ["--data-format=\(request.output.dataFormat ?? request.output.container.defaultDataFormat)"]
             if let count = request.output.channels { arguments += ["--channels=\(count)"] }
             if let rate = request.output.bitRate { arguments += ["--bit-rate=\(rate)"] }
             if let quality = request.output.quality { arguments += ["--quality=\(quality)"] }

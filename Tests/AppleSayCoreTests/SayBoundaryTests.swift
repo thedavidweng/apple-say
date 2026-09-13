@@ -87,7 +87,7 @@ final class SayBoundaryTests: XCTestCase {
                                     output: ExportSettings(container: .wav))
         let arguments = try SayArguments.make(for: request, input: URL(fileURLWithPath: "/tmp/input file"))
         XCTAssertFalse(arguments.contains(text))
-        XCTAssertEqual(arguments, ["-r", "212", "-f", "/tmp/input file", "-v", "A Voice", "-o", "/tmp/a file;name.wav", "--file-format=WAVE"])
+        XCTAssertEqual(arguments, ["-r", "212", "-f", "/tmp/input file", "-v", "A Voice", "-o", "/tmp/a file;name.wav", "--file-format=WAVE", "--data-format=LEI16"])
         XCTAssertEqual(try SayArguments.inputText(for: request), text)
     }
 
