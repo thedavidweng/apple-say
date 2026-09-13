@@ -17,13 +17,6 @@ import Foundation
         }
     }
 
-    public func personalVoices() -> [Voice] {
-        guard authorization() == .authorized else { return [] }
-        return AVSpeechSynthesisVoice.speechVoices()
-            .filter { $0.voiceTraits.contains(.isPersonalVoice) }
-            .map { Voice(id: $0.identifier, name: $0.name, language: $0.language, isPersonal: true) }
-    }
-
     private nonisolated static func map(_ status: AVSpeechSynthesizer.PersonalVoiceAuthorizationStatus) -> PersonalVoiceAuthorization {
         switch status {
         case .notDetermined: return .notDetermined

@@ -9,9 +9,14 @@ enum VoiceManagement {
         let anchor = destination == .voices ? "AX_SPOKEN_VOICE" : "PersonalVoice"
         let url = URL(string: "x-apple.systempreferences:com.apple.Accessibility-Settings.extension?\(anchor)")!
         if !NSWorkspace.shared.open(url) {
+            let strings = AppStrings(preferenceRawValue:
+                UserDefaults.standard.string(forKey: AppLanguagePreference.defaultsKey) ?? AppLanguagePreference.system.rawValue)
             let alert = NSAlert()
-            alert.messageText = "System Settings could not be opened."
-            alert.informativeText = "Open System Settings → Accessibility, then choose Read & Speak or Personal Voice."
+            alert.messageText = strings.text("System Settings could not be opened.", "无法打开系统设置。")
+            alert.informativeText = strings.text(
+                "Open System Settings → Accessibility, then choose Read & Speak or Personal Voice.",
+                "请打开“系统设置”→“辅助功能”，然后选择“朗读内容”或“个人声音”。"
+            )
             alert.runModal()
         }
     }
@@ -22,13 +27,14 @@ enum VoiceManagement {
 struct VoicePopUp: NSViewRepresentable {
     var voices: [Voice]
     @Binding var selection: Voice?
+    let strings: AppStrings
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     func makeNSView(context: Context) -> NSPopUpButton {
         let button = NSPopUpButton(frame: .zero, pullsDown: false)
         context.coordinator.button = button
-        button.setAccessibilityLabel("Voice")
+        button.setAccessibilityLabel(strings.text("Voice", "声音"))
         button.setContentHuggingPriority(.defaultLow, for: .horizontal)
         return button
     }
@@ -36,7 +42,11 @@ struct VoicePopUp: NSViewRepresentable {
     func updateNSView(_ button: NSPopUpButton, context: Context) {
         context.coordinator.parent = self
         button.removeAllItems()
-        let defaultItem = NSMenuItem(title: "System Default", action: #selector(Coordinator.selectVoice(_:)), keyEquivalent: "")
+        button.setAccessibilityLabel(strings.text("Voice", "声音"))
+        let defaultItem = NSMenuItem(
+            title: strings.text("System Default", "系统默认"),
+            action: #selector(Coordinator.selectVoice(_:)), keyEquivalent: ""
+        )
         defaultItem.target = context.coordinator
         button.menu?.addItem(defaultItem)
         var listedVoices = voices
@@ -46,7 +56,7 @@ struct VoicePopUp: NSViewRepresentable {
         }
         for voice in listedVoices {
             let item = NSMenuItem(
-                title: voice.name + (voice.isPersonal ? " (Personal Voice)" : ""),
+                title: voice.name + (voice.isPersonal ? strings.text(" (Personal Voice)", "（个人声音）") : ""),
                 action: #selector(Coordinator.selectVoice(_:)), keyEquivalent: ""
             )
             item.representedObject = voice.id
@@ -56,8 +66,8 @@ struct VoicePopUp: NSViewRepresentable {
         }
         button.menu?.addItem(.separator())
         for (title, action) in [
-            ("Add Voices…", #selector(Coordinator.addVoices)),
-            ("Personal Voice Settings…", #selector(Coordinator.personalVoiceSettings))
+            (strings.text("Add Voices…", "添加声音…"), #selector(Coordinator.addVoices)),
+            (strings.text("Personal Voice Settings…", "个人声音设置…"), #selector(Coordinator.personalVoiceSettings))
         ] {
             let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
             item.target = context.coordinator

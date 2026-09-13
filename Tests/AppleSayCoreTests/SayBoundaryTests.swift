@@ -41,6 +41,43 @@ final class SayBoundaryTests: XCTestCase {
         XCTAssertNil(VoiceLanguage.systemDefault(among: voices, preferredLanguages: ["ja-JP"]))
     }
 
+    func testVoiceRecommendationPrefersQualityAndRejectsSurprisingDefaults() {
+        let voices = [
+            Voice(id: "personal", name: "My Voice", language: "en_US", isPersonal: true, quality: .premium),
+            Voice(id: "novelty", name: "Bells", language: "en_US", isNovelty: true, quality: .premium),
+            Voice(id: "standard", name: "Ralph", language: "en_US"),
+            Voice(id: "compact", name: "Samantha", language: "en_US", quality: .compact),
+            Voice(id: "enhanced", name: "Ava (Enhanced)", language: "en_US", quality: .enhanced),
+            Voice(id: "chinese", name: "Tingting", language: "zh_CN", quality: .premium)
+        ]
+        XCTAssertEqual(VoiceRecommendation.best(among: voices, language: "en_US")?.id, "enhanced")
+        XCTAssertEqual(VoiceRecommendation.best(among: voices, language: "zh_CN")?.id, "chinese")
+        XCTAssertNil(VoiceRecommendation.best(among: voices, language: "fr_FR"))
+    }
+
+    func testVoiceRecommendationSkipsLanguagesWithoutANaturalCandidate() {
+        let voices = [
+            Voice(id: "novelty", name: "Bells", language: "en_US", isNovelty: true, quality: .premium),
+            Voice(id: "personal", name: "My Voice", language: "en_US", isPersonal: true, quality: .premium),
+            Voice(id: "french", name: "Thomas", language: "fr_FR", quality: .compact)
+        ]
+        XCTAssertEqual(VoiceRecommendation.best(
+            among: voices,
+            preferredLanguages: ["en-US", "fr-FR"]
+        )?.id, "french")
+    }
+
+    @MainActor func testVoiceMetadataMergeRejectsAmbiguousPersonalVoiceNames() {
+        let catalog = [Voice(id: "Samantha", name: "Samantha", language: "en_US")]
+        let metadata = [
+            SystemVoiceMetadata(name: "Samantha", language: "en-US", isPersonal: false,
+                                isNovelty: false, quality: .compact),
+            SystemVoiceMetadata(name: "Samantha", language: "en-US", isPersonal: true,
+                                isNovelty: false, quality: .premium)
+        ]
+        XCTAssertTrue(SystemSpeech.merge(catalog: catalog, metadata: metadata).isEmpty)
+    }
+
     func testSpeechContentNeverBecomesAProcessArgument() throws {
         var settings = SpeechSettings(voice: Voice(id: "a", name: "A Voice", language: "en_US"))
         settings.speed = 212

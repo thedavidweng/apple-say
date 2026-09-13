@@ -55,31 +55,38 @@ struct AppleSayApp: App {
         }
         .defaultSize(width: 960, height: 660)
         .commands { SpeechCommands() }
+
+        Settings {
+            LanguageSettingsView()
+        }
     }
 }
 
 struct SpeechCommands: Commands {
     @FocusedValue(\.speechActions) private var actions
+    @AppStorage(AppLanguagePreference.defaultsKey) private var languagePreference = AppLanguagePreference.system.rawValue
+
+    private var strings: AppStrings { AppStrings(preferenceRawValue: languagePreference) }
 
     var body: some Commands {
         CommandGroup(after: .saveItem) {
-            Button("Export Audio…") { actions?.export() }
+            Button(strings.text("Export Audio…", "导出音频…")) { actions?.export() }
                 .keyboardShortcut("e", modifiers: [.command, .shift])
                 .disabled(actions?.canExport != true)
         }
-        CommandMenu("Speech") {
-            Button("Preview") { actions?.preview() }
+        CommandMenu(strings.text("Speech", "语音")) {
+            Button(strings.text("Preview", "播放")) { actions?.preview() }
                 .keyboardShortcut(.return, modifiers: .command)
                 .disabled(actions?.canPreview != true)
-            Button("Stop") { actions?.stop() }
+            Button(strings.text("Stop", "停止")) { actions?.stop() }
                 .keyboardShortcut(".", modifiers: .command)
                 .disabled(actions?.canStop != true)
             Divider()
-            Button("Add Voices…") { VoiceManagement.open(.voices) }
-            Button("Personal Voice Settings…") { VoiceManagement.open(.personalVoice) }
+            Button(strings.text("Add Voices…", "添加声音…")) { VoiceManagement.open(.voices) }
+            Button(strings.text("Personal Voice Settings…", "个人声音设置…")) { VoiceManagement.open(.personalVoice) }
         }
         CommandGroup(after: .sidebar) {
-            Button("Show or Hide Speech Inspector") { actions?.toggleInspector() }
+            Button(strings.text("Show or Hide Speech Inspector", "显示或隐藏语音检查器")) { actions?.toggleInspector() }
                 .keyboardShortcut("i", modifiers: [.command, .option])
                 .disabled(actions == nil)
         }

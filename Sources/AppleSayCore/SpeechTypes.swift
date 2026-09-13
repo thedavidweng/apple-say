@@ -1,12 +1,52 @@
 import Foundation
 
+public enum VoiceQuality: Int, Comparable, Sendable {
+    case legacy
+    case standard
+    case compact
+    case enhanced
+    case premium
+
+    public static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
+}
+
 public struct Voice: Identifiable, Hashable, Sendable {
     public let id: String
     public let name: String
     public let language: String
     public let isPersonal: Bool
-    public init(id: String, name: String, language: String, isPersonal: Bool = false) {
+    public let isNovelty: Bool
+    public let quality: VoiceQuality
+    public init(id: String, name: String, language: String, isPersonal: Bool = false,
+                isNovelty: Bool = false, quality: VoiceQuality = .standard) {
         self.id = id; self.name = name; self.language = language; self.isPersonal = isPersonal
+        self.isNovelty = isNovelty; self.quality = quality
+    }
+}
+
+public enum VoiceRecommendation {
+    /// Chooses a natural installed voice for first use. Personal and novelty voices
+    /// remain explicit user choices because they can be surprising as app defaults.
+    public static func best(among voices: [Voice], language: String) -> Voice? {
+        ranked(voices.filter { $0.language == language }).first
+    }
+
+    public static func best(among voices: [Voice], preferredLanguages: [String]) -> Voice? {
+        let candidates = ranked(voices)
+        guard let language = VoiceLanguage.systemDefault(
+            among: candidates,
+            preferredLanguages: preferredLanguages
+        ) else { return nil }
+        return candidates.first { $0.language == language }
+    }
+
+    private static func ranked(_ voices: [Voice]) -> [Voice] {
+        voices
+            .filter { !$0.isPersonal && !$0.isNovelty }
+            .sorted {
+                if $0.quality != $1.quality { return $0.quality > $1.quality }
+                return $0.name.localizedStandardCompare($1.name) == .orderedAscending
+            }
     }
 }
 

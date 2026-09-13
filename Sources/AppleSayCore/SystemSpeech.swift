@@ -1,6 +1,14 @@
 import AVFAudio
 import Foundation
 
+struct SystemVoiceMetadata: Sendable {
+    let name: String
+    let language: String
+    let isPersonal: Bool
+    let isNovelty: Bool
+    let quality: VoiceQuality
+}
+
 /// The production speech boundary. `say` is the only speech synthesizer; Apple
 /// audio frameworks inspect output and capture genuine Personal Voice playback.
 @MainActor public final class SystemSpeech: SpeechSystem {
@@ -15,13 +23,69 @@ import Foundation
 
     public func voices() async throws -> [Voice] {
         let listing = try await discovery.run(arguments: ["-v", "?"]).checked()
-        let personal = personalVoice.personalVoices()
+        let catalog = SayCatalog.voices(from: listing)
+        let metadata = AVSpeechSynthesisVoice.speechVoices().map {
+            SystemVoiceMetadata(
+                name: $0.name,
+                language: $0.language,
+                isPersonal: $0.voiceTraits.contains(.isPersonalVoice),
+                isNovelty: $0.voiceTraits.contains(.isNoveltyVoice),
+                quality: Self.quality(metadata: $0)
+            )
+        }
         // AVSpeechSynthesizer provides authorization/traits only. A voice must
         // also be advertised by say before we allow it into the speech workflow.
-        return SayCatalog.voices(from: listing).map { voice in
-            let isPersonal = personal.contains { $0.name == voice.name && $0.language.replacingOccurrences(of: "-", with: "_") == voice.language.replacingOccurrences(of: "-", with: "_") }
-            return Voice(id: voice.id, name: voice.name, language: voice.language, isPersonal: isPersonal)
+        return Self.merge(catalog: catalog, metadata: metadata)
+    }
+
+    static func merge(catalog: [Voice], metadata: [SystemVoiceMetadata]) -> [Voice] {
+        catalog.compactMap { voice in
+            let matches = metadata.filter { Self.matches(voice, metadata: $0) }
+            guard !matches.isEmpty else {
+                return Voice(id: voice.id, name: voice.name, language: voice.language,
+                             quality: Self.quality(name: voice.name, metadataQuality: nil))
+            }
+            // `say` exposes only display name and locale. If those identify both
+            // a Personal Voice and an ordinary Voice, selecting either is unsafe.
+            guard Set(matches.map(\.isPersonal)).count == 1 else { return nil }
+            return Voice(
+                id: voice.id,
+                name: voice.name,
+                language: voice.language,
+                isPersonal: matches[0].isPersonal,
+                isNovelty: matches.contains(where: \.isNovelty),
+                quality: Self.quality(name: voice.name, metadataQuality: matches.map(\.quality).max())
+            )
         }
+    }
+
+    private static func matches(_ voice: Voice, metadata: SystemVoiceMetadata) -> Bool {
+        let localeMatches = voice.language.replacingOccurrences(of: "_", with: "-")
+            .caseInsensitiveCompare(metadata.language) == .orderedSame
+        let nameMatches = voice.name == metadata.name || voice.name.hasPrefix(metadata.name + " (")
+        return localeMatches && nameMatches
+    }
+
+    private static func quality(name: String, metadataQuality: VoiceQuality?) -> VoiceQuality {
+        if name.localizedCaseInsensitiveContains("(Premium)") || metadataQuality == .premium {
+            return .premium
+        }
+        if name.localizedCaseInsensitiveContains("(Enhanced)") || metadataQuality == .enhanced {
+            return .enhanced
+        }
+        return metadataQuality ?? .standard
+    }
+
+    private static func quality(metadata: AVSpeechSynthesisVoice) -> VoiceQuality {
+        if metadata.quality == .premium { return .premium }
+        if metadata.quality == .enhanced
+            || metadata.identifier.localizedCaseInsensitiveContains("siri") {
+            return .enhanced
+        }
+        if metadata.identifier.contains(".voice.compact.") { return .compact }
+        if metadata.identifier.contains(".eloquence.")
+            || metadata.identifier.contains(".speech.synthesis.voice.") { return .legacy }
+        return .standard
     }
 
     public func capabilities() async throws -> SpeechCapabilities {
