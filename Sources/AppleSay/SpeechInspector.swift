@@ -34,8 +34,8 @@ struct SpeechInspector: View {
                     Text("\(settings.speed) words/min").monospacedDigit()
                 }
                 Slider(value: Binding(
-                    get: { Double(settings.speed) }, set: { settings.speed = Int($0) }
-                ), in: Double(speech.capabilities.speedRange.lowerBound)...Double(speech.capabilities.speedRange.upperBound), step: 1)
+                    get: { Double(settings.speed) }, set: { settings.speed = Int($0.rounded()) }
+                ), in: Double(speech.capabilities.speedRange.lowerBound)...Double(speech.capabilities.speedRange.upperBound))
                 .accessibilityLabel("Speech Speed")
                 .accessibilityValue("\(settings.speed) words per minute")
                 Toggle("Natural Pitch", isOn: Binding(
