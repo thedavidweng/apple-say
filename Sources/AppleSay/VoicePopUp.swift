@@ -6,7 +6,7 @@ enum VoiceManagement {
     enum Destination { case voices, personalVoice }
 
     @MainActor static func open(_ destination: Destination) {
-        let anchor = destination == .voices ? "SpokenContent" : "PersonalVoice"
+        let anchor = destination == .voices ? "AX_SPOKEN_VOICE" : "PersonalVoice"
         let url = URL(string: "x-apple.systempreferences:com.apple.Accessibility-Settings.extension?\(anchor)")!
         if !NSWorkspace.shared.open(url) {
             let alert = NSAlert()

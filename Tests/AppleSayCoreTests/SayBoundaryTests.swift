@@ -25,6 +25,22 @@ final class SayBoundaryTests: XCTestCase {
         ])
     }
 
+    func testSystemLanguagePrefersAnExactInstalledVoiceLocale() {
+        let voices = [
+            Voice(id: "uk", name: "Daniel", language: "en_GB"),
+            Voice(id: "us", name: "Samantha", language: "en_US"),
+            Voice(id: "cn", name: "Tingting", language: "zh_CN")
+        ]
+        XCTAssertEqual(VoiceLanguage.systemDefault(among: voices, preferredLanguages: ["en-US"]), "en_US")
+        XCTAssertEqual(VoiceLanguage.systemDefault(among: voices, preferredLanguages: ["zh-Hans-CN"]), "zh_CN")
+    }
+
+    func testSystemLanguageUsesTheFirstAvailableSameLanguageVariant() {
+        let voices = [Voice(id: "fr", name: "Thomas", language: "fr_FR")]
+        XCTAssertEqual(VoiceLanguage.systemDefault(among: voices, preferredLanguages: ["de-DE", "fr-CA"]), "fr_FR")
+        XCTAssertNil(VoiceLanguage.systemDefault(among: voices, preferredLanguages: ["ja-JP"]))
+    }
+
     func testSpeechContentNeverBecomesAProcessArgument() throws {
         var settings = SpeechSettings(voice: Voice(id: "a", name: "A Voice", language: "en_US"))
         settings.speed = 212

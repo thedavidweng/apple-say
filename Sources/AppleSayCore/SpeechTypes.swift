@@ -10,6 +10,41 @@ public struct Voice: Identifiable, Hashable, Sendable {
     }
 }
 
+public enum VoiceLanguage {
+    /// Matches the user's ordered macOS language preferences to a locale exposed
+    /// by `say`, preferring the exact region before a same-language variant.
+    public static func systemDefault(among voices: [Voice],
+                                     preferredLanguages: [String] = Locale.preferredLanguages) -> String? {
+        var available: [String] = []
+        for voice in voices where !available.contains(voice.language) { available.append(voice.language) }
+        for preference in preferredLanguages {
+            if let exact = available.first(where: { normalized($0) == normalized(preference) }) {
+                return exact
+            }
+            let preferred = components(preference)
+            if let regional = available.first(where: {
+                let candidate = components($0)
+                return candidate.language == preferred.language && candidate.region == preferred.region
+            }) {
+                return regional
+            }
+            if let language = available.first(where: { components($0).language == preferred.language }) {
+                return language
+            }
+        }
+        return nil
+    }
+
+    private static func normalized(_ identifier: String) -> String {
+        identifier.replacingOccurrences(of: "_", with: "-").lowercased()
+    }
+
+    private static func components(_ identifier: String) -> (language: String?, region: String?) {
+        let locale = Locale(identifier: identifier.replacingOccurrences(of: "_", with: "-"))
+        return (locale.language.languageCode?.identifier, locale.region?.identifier)
+    }
+}
+
 public enum PersonalVoiceAuthorization: String, Sendable {
     case notDetermined, denied, restricted, authorized, unsupported
 }

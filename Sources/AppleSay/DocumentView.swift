@@ -13,6 +13,7 @@ struct DocumentView: View {
     @State private var output = ExportSettings()
     @State private var inspectorPresented = true
     @State private var language = ""
+    @State private var hasInitializedLanguage = false
     @State private var errorMessage: String?
     @State private var refreshing = false
 
@@ -128,6 +129,10 @@ struct DocumentView: View {
         defer { refreshing = false }
         do {
             try await speech.refresh()
+            if !hasInitializedLanguage {
+                language = VoiceLanguage.systemDefault(among: speech.voices) ?? ""
+                hasInitializedLanguage = true
+            }
             if let voice = settings.voice, !speech.voices.contains(where: { $0.id == voice.id }) {
                 errorMessage = "The selected Voice is no longer available. Choose a Voice before continuing."
             }
