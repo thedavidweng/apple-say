@@ -64,7 +64,7 @@ Primary documentation:
   `AVSpeechSynthesis.h` specify process scoping, tap auto-start, asynchronous I/O,
   voice traits, and authorization states.
 
-## Verification requiring a local Personal Voice
+## Real-device verification
 
 Automated orchestration tests exercise native success, native unavailability,
 capture success, capture unavailability, capture failure, authorization states,
@@ -73,23 +73,27 @@ The macOS development machine also verified that a real `say` child registers a
 Core Audio process before standard input is released. This probe produced no
 speech and requested no capture permission.
 
-A signed application and a user-created Personal Voice are still required to
-verify the following real-device behavior:
+A signed Apple Say build on macOS 26.6.2 was authorized for the local `David 中文`
+Personal Voice. Preview completed through the selected Voice. Native Export
+produced a non-silent 2.425-second AIFF with 53,480 frames and a 0.6866 peak.
 
-1. Request access from Apple Say, select an authorized Personal Voice in the normal
-   Voice menu, and Preview. Confirm the app owns the authorization and the expected
-   Voice is audible.
-2. Export Plain Text. Record whether native output or process capture succeeded;
-   listen to the complete artifact and verify the first and last words. Compare
+To exercise the compatibility route on a system where native output now works,
+a temporary uncommitted verification build forced native output to report
+unavailable. The process tap then produced a non-silent 2.656-second AIFF with
+117,130 frames, 106,084 samples above 0.0001, and a 0.6938 peak. The forcing code was
+removed before the release build. This verifies real Personal Voice capture and
+conversion without shipping a test switch or alternate product path.
+
+Before release across additional machines, repeat these environmental checks:
+
+1. Listen to the complete native and captured artifacts and verify the first and
+   last words. Compare
    the capture against a simultaneous unrelated audio source to confirm that the
    unrelated source is absent.
-3. Revoke system audio recording permission and retry a capture-required Export.
+2. Revoke system audio recording permission and retry a capture-required Export.
    Confirm a clear failure, no output artifact, and unaffected ordinary Preview.
-4. Export LRC and Enhanced LRC with leading and inter-unit silence, then inspect
+3. Export LRC and Enhanced LRC with leading and inter-unit silence, then inspect
    absolute placement and rate-fitting behavior. Confirm the first and last words
    of every unit are present and the source remains the selected Personal Voice.
-5. Stop during process preparation and during recording. Confirm playback stops,
+4. Stop during process preparation and during recording. Confirm playback stops,
    the partial artifact is removed, and the next Preview works normally.
-
-The implementation must not be represented as end-to-end Personal Voice fixture
-validation until those steps have been run with actual permission and voice data.

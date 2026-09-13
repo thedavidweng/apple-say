@@ -17,6 +17,7 @@ struct DocumentView: View {
     @State private var language = ""
     @State private var hasInitializedLanguage = false
     @State private var errorMessage: String?
+    @State private var showPersonalVoiceSettingsGuidance = false
     @State private var refreshing = false
 
     private var strings: AppStrings { AppStrings(preferenceRawValue: languagePreference) }
@@ -94,6 +95,18 @@ struct DocumentView: View {
         )) {
             Button(strings.text("OK", "好"), role: .cancel) { errorMessage = nil }
         } message: { Text(errorMessage ?? "") }
+        .alert(strings.text("Allow Personal Voice", "允许个人声音"),
+               isPresented: $showPersonalVoiceSettingsGuidance) {
+            Button(strings.text("Cancel", "取消"), role: .cancel) {}
+            Button(strings.text("Open System Settings", "打开系统设置")) {
+                VoiceManagement.open(.personalVoice)
+            }
+        } message: {
+            Text(strings.text(
+                "Turn on “Allow applications to request to use Personal Voice,” then allow Apple Say in the app list.",
+                "请开启“允许应用程序请求使用个人声音”，然后在应用列表中允许 Apple Say。"
+            ))
+        }
     }
 
     private var statusBar: some View {
@@ -179,7 +192,10 @@ struct DocumentView: View {
 
     private func authorize() {
         Task {
-            do { try await speech.authorizePersonalVoice() }
+            do {
+                try await speech.authorizePersonalVoice()
+                showPersonalVoiceSettingsGuidance = speech.authorization == .denied
+            }
             catch { errorMessage = error.localizedDescription }
         }
     }

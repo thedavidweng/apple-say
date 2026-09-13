@@ -84,18 +84,23 @@ struct SpeechInspector: View {
     @ViewBuilder private var personalVoiceStatus: some View {
         switch speech.authorization {
         case .notDetermined:
-            Text(strings.text("Allow Apple Say to use your Personal Voices.", "允许 Apple Say 使用你的个人声音。"))
+            Text(strings.text(
+                "Use your Personal Voice for Preview and Export. macOS will ask for your permission.",
+                "使用个人声音进行播放和导出。macOS 会先征求你的许可。"
+            ))
                 .foregroundStyle(.secondary)
-            Button(strings.text("Authorize Personal Voice…", "授权个人声音…"), action: authorize)
+            Button(strings.text("Continue…", "继续…"), action: authorize)
         case .authorized:
             authorizedPersonalVoiceStatus
         case .denied:
             Text(strings.text(
-                "Access was denied. Allow Apple Say in Personal Voice Settings.",
-                "访问被拒绝。请在个人声音设置中允许 Apple Say 访问。"
+                "Allow applications to request Personal Voice access, then allow Apple Say in System Settings.",
+                "请允许应用程序请求个人声音访问，然后在系统设置中允许 Apple Say。"
             ))
                 .foregroundStyle(.secondary)
-            Button(strings.text("Personal Voice Settings…", "个人声音设置…")) { VoiceManagement.open(.personalVoice) }
+            Button(strings.text("Open Personal Voice Settings…", "打开个人声音设置…")) {
+                VoiceManagement.open(.personalVoice)
+            }
         case .restricted:
             Text(strings.text("Personal Voice access is restricted by this Mac.", "此 Mac 限制了个人声音访问。"))
                 .foregroundStyle(.secondary)
