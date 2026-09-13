@@ -28,6 +28,12 @@ does not register the child before input, isolates speech in another process,
 denies audio capture, or otherwise prevents this route, Export fails with a clear
 error. Ordinary Voice operations continue to work.
 
+`PersonalVoiceCapability` exposes the result without leaking the export mechanism
+into the main workflow. Authorization and the Voice catalog establish unavailable,
+permission-required, ready, or unsupported states. The first real Personal Voice
+Export then records native export, compatibility export, or playback-only capability.
+The inspector reports the useful product behavior and does not mention process taps.
+
 `NSPersonalVoiceUsageDescription` and `NSAudioCaptureUsageDescription` must be in
 the application bundle. The latter allows macOS to request system audio recording
 permission for Apple Say when the compatibility capture route is first used. Run
@@ -43,6 +49,12 @@ mechanism. Its independent implementation uses Apple's documented public process
 tap API and app authorization. There is no injected library, copied system
 executable, installed helper, alternative speech engine, microphone capture, or
 security-setting modification.
+
+On macOS 26.6.2 (build 25G83), a constructor-marker dylib supplied through
+`DYLD_INSERT_LIBRARIES` was not loaded by the Apple-platform `/usr/bin/say` binary,
+while the same command still produced an ordinary Voice AIFF file. The Sonoma-era
+interpose path therefore cannot serve as Apple Say's Tahoe compatibility layer.
+This is a direct capability result rather than a version-number assumption.
 
 Primary documentation:
 

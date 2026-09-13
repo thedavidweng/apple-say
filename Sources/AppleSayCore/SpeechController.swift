@@ -27,6 +27,7 @@ public struct AudioPlacement: Equatable, Sendable {
     public private(set) var voices: [Voice] = []
     public private(set) var capabilities = SpeechCapabilities()
     public private(set) var authorization: PersonalVoiceAuthorization = .notDetermined
+    public private(set) var personalVoiceCapability: PersonalVoiceCapability = .permissionRequired
     public private(set) var state: SpeechJobState = .idle
     public private(set) var lastResult: SpeechResult?
     private let system: any SpeechSystem
@@ -53,11 +54,13 @@ public struct AudioPlacement: Equatable, Sendable {
         voices = availableVoices
         capabilities = availableCapabilities
         authorization = system.authorization()
+        updatePersonalVoiceCapability()
     }
 
     public func authorizePersonalVoice() async throws {
         authorization = await system.requestAuthorization()
         voices = try await system.voices()
+        updatePersonalVoiceCapability()
     }
 
     public func preview(text: String, settings: SpeechSettings) async throws {
@@ -166,6 +169,9 @@ public struct AudioPlacement: Equatable, Sendable {
     private func render(_ request: SpeechRequest, scratch: URL) async throws -> Bool {
         do {
             try await system.speak(request)
+            if request.settings.voice?.isPersonal == true, request.destination != nil {
+                personalVoiceCapability = .nativeExport
+            }
             return false
         } catch SpeechError.nativeOutputUnavailable {
             guard request.settings.voice?.isPersonal == true, let destination = request.destination else { throw errorForNativeRoute() }
@@ -173,11 +179,37 @@ public struct AudioPlacement: Equatable, Sendable {
             let captureRequest = SpeechRequest(text: request.text, settings: request.settings, destination: capture,
                                                output: .init(container: .caf))
             try Task.checkCancellation()
-            try await system.capturePersonalVoice(captureRequest)
+            do {
+                try await system.capturePersonalVoice(captureRequest)
+            } catch let error as SpeechError {
+                if case .captureUnavailable = error { personalVoiceCapability = .playbackOnly }
+                if case .captureFailed = error { personalVoiceCapability = .playbackOnly }
+                throw error
+            }
             try await Task.detached {
                 try AudioFiles.convert(capture, to: destination, settings: request.output)
             }.cancellableValue()
+            personalVoiceCapability = .compatibilityExport
             return true
+        }
+    }
+
+    private func updatePersonalVoiceCapability() {
+        switch authorization {
+        case .notDetermined, .denied:
+            personalVoiceCapability = .permissionRequired
+        case .restricted, .unsupported:
+            personalVoiceCapability = .unsupported
+        case .authorized:
+            guard voices.contains(where: \.isPersonal) else {
+                personalVoiceCapability = .unavailable
+                return
+            }
+            switch personalVoiceCapability {
+            case .nativeExport, .compatibilityExport, .playbackOnly: break
+            case .unavailable, .permissionRequired, .ready, .unsupported:
+                personalVoiceCapability = .ready
+            }
         }
     }
 

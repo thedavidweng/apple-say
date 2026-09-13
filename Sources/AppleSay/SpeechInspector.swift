@@ -88,11 +88,7 @@ struct SpeechInspector: View {
                 .foregroundStyle(.secondary)
             Button(strings.text("Authorize Personal Voice…", "授权个人声音…"), action: authorize)
         case .authorized:
-            Text(strings.text(
-                "Authorized. Available Personal Voices appear in the Voice menu.",
-                "已授权。可用的个人声音会显示在声音菜单中。"
-            ))
-                .foregroundStyle(.secondary)
+            authorizedPersonalVoiceStatus
         case .denied:
             Text(strings.text(
                 "Access was denied. Allow Apple Say in Personal Voice Settings.",
@@ -106,6 +102,31 @@ struct SpeechInspector: View {
         case .unsupported:
             Text(strings.text("Personal Voice is unavailable on this Mac.", "此 Mac 不支持个人声音。"))
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder private var authorizedPersonalVoiceStatus: some View {
+        switch speech.personalVoiceCapability {
+        case .unavailable:
+            Text(strings.text("No Personal Voices are installed.", "尚未安装个人声音。"))
+                .foregroundStyle(.secondary)
+            Button(strings.text("Personal Voice Settings…", "个人声音设置…")) { VoiceManagement.open(.personalVoice) }
+        case .playbackOnly:
+            Text(strings.text("✓ Playback available", "✓ 可以播放"))
+            Text(strings.text("— File export is unavailable on this macOS version", "— 此 macOS 版本无法导出文件"))
+                .foregroundStyle(.secondary)
+            Button(strings.text("Personal Voice Settings…", "个人声音设置…")) { VoiceManagement.open(.personalVoice) }
+        case .nativeExport, .compatibilityExport:
+            Text(strings.text("Playback and file export are available.", "可以播放和导出文件。"))
+                .foregroundStyle(.secondary)
+        case .ready:
+            Text(strings.text(
+                "Authorized. File export support will be checked when first used.",
+                "已授权。首次导出时会检查文件导出能力。"
+            ))
+            .foregroundStyle(.secondary)
+        case .permissionRequired, .unsupported:
+            EmptyView()
         }
     }
 

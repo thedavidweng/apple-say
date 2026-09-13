@@ -244,6 +244,7 @@ import Testing
                                     output: .init(container: .caf), to: destination)
 
         #expect(controller.lastResult?.usedPersonalVoiceCapture == true)
+        #expect(controller.personalVoiceCapability == .compatibilityExport)
         #expect(try AudioFiles.duration(of: destination) > 0)
         #expect(system.requests.count == 1)
     }
@@ -260,6 +261,7 @@ import Testing
                                     output: .init(container: .caf), to: destination)
 
         #expect(controller.lastResult?.usedPersonalVoiceCapture == false)
+        #expect(controller.personalVoiceCapability == .nativeExport)
         #expect(try AudioFiles.duration(of: destination) > 0)
     }
 
@@ -286,6 +288,7 @@ import Testing
             }
         }
         #expect(!FileManager.default.fileExists(atPath: failedDestination.path))
+        #expect(controller.personalVoiceCapability == .playbackOnly)
 
         try await controller.export(text: "Standard", settings: .init(voice: system.availableVoices[0]),
                                     output: .init(container: .caf), to: standardDestination)
@@ -311,6 +314,7 @@ import Testing
         }
         #expect(!FileManager.default.fileExists(atPath: destination.path))
         #expect(controller.state == .failed("Personal Voice audio capture failed: Writer failed"))
+        #expect(controller.personalVoiceCapability == .playbackOnly)
     }
 
     @Test func personalVoiceLRCUsesTheSharedTimelineAndCapturePath() async throws {
@@ -379,14 +383,22 @@ import Testing
     @Test func personalVoiceAuthorizationStatesFlowThroughTheOrchestrationSeam() async throws {
         let system = TestSpeechSystem()
         let controller = SpeechController(system: system)
-        for state: PersonalVoiceAuthorization in [.notDetermined, .denied, .restricted, .authorized] {
+        let states: [(PersonalVoiceAuthorization, PersonalVoiceCapability)] = [
+            (.notDetermined, .permissionRequired),
+            (.denied, .permissionRequired),
+            (.restricted, .unsupported),
+            (.authorized, .ready)
+        ]
+        for (state, capability) in states {
             system.auth = state
             try await controller.refresh()
             #expect(controller.authorization == state)
+            #expect(controller.personalVoiceCapability == capability)
         }
         system.auth = .notDetermined
         try await controller.authorizePersonalVoice()
         #expect(controller.authorization == .authorized)
+        #expect(controller.personalVoiceCapability == .ready)
         #expect(controller.voices.contains { $0.isPersonal })
     }
 

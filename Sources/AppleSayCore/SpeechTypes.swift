@@ -89,6 +89,17 @@ public enum PersonalVoiceAuthorization: String, Sendable {
     case notDetermined, denied, restricted, authorized, unsupported
 }
 
+public enum PersonalVoiceCapability: Equatable, Sendable {
+    case unavailable
+    case permissionRequired
+    /// A Personal Voice is available; its file export route is probed on first use.
+    case ready
+    case playbackOnly
+    case nativeExport
+    case compatibilityExport
+    case unsupported
+}
+
 public struct SpeechSettings: Equatable, Sendable {
     public var voice: Voice?
     public var speed: Int = 175
