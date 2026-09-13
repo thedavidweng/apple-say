@@ -1,0 +1,5 @@
+"CFBundleDisplayName" = "Apple Say";
+"CFBundleName" = "Apple Say";
+"NSHumanReadableCopyright" = "版权所有 © 2026 David Weng。保留所有权利。";
+"NSPersonalVoiceUsageDescription" = "Apple Say 使用你的个人声音播放并导出你选择的文本。";
+"NSAudioCaptureUsageDescription" = "当系统无法直接导出音频时，Apple Say 只会捕获所选个人声音的语音进程。";

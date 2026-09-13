@@ -1,0 +1,5 @@
+"CFBundleDisplayName" = "Apple Say";
+"CFBundleName" = "Apple Say";
+"NSHumanReadableCopyright" = "Copyright © 2026 David Weng. All rights reserved.";
+"NSPersonalVoiceUsageDescription" = "Apple Say uses your Personal Voice to preview and export the text you choose.";
+"NSAudioCaptureUsageDescription" = "Apple Say captures only the selected Personal Voice speech process when native audio export is unavailable.";
