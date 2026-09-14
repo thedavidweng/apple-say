@@ -15,6 +15,9 @@
     <a href="README.md"><strong>English</strong></a> •
     <a href="README_zh.md"><strong>简体中文</strong></a>
   </p>
+
+  <br />
+  <img src="public/screenshot.png" alt="Apple Say Main Window" width="800" />
 </div>
 
 ---
@@ -29,7 +32,7 @@ Everything runs entirely on your Mac—no cloud services, no network calls, no s
 
 - 📄 **Native macOS Document Workflow**: Built as a standard macOS document app supporting tabs, autosave, versions, and full UTF-8 encoding.
 - ⏱️ **Smart Timed-Text Alignment**: Seamlessly handles Plain Text, LRC (line-level timing), and Enhanced LRC (word/fragment-level timing). Timestamps constrain absolute audio placement—Apple Say dynamically measures rendered speech and accelerates speech speed when necessary to meet the next timestamp without clipping.
-- 🗣️ **System & Personal Voices**: Discover and use all voices installed on macOS. Filter voices by language, or synthesize audio using your authorized Apple **Personal Voice**.
+- 🗣️ **System & Personal Voices**: Discover and use all voices installed on macOS. Filter voices by language, use **System Voice** (with automatic support for macOS Siri Natural voices), or synthesize audio using your authorized Apple **Personal Voice**.
 - 🎛️ **Comprehensive Speech Inspector**: Adjust Speech Speed (WPM) and Pitch, select output container formats (AAC, AIFF, WAV, CAF), and configure advanced audio properties including channels, sample rates, bitrates, and converter quality.
 - 🎧 **Instant Preview & Audio Export**: Audition any segment immediately with keyboard shortcuts, or export high-resolution audio files directly through the native macOS save dialog.
 - 🔒 **100% Private & Offline**: All speech synthesis and audio processing stay strictly local. No telemetry, no background analytics, and no external dependencies.
@@ -141,7 +144,8 @@ For more details, see [PRIVACY.md](PRIVACY.md).
 
 ---
 
-## 📄 License & Issues
+## 📄 License & Contributing
 
 - Project specifications and terminology are documented in [CONTEXT.md](CONTEXT.md).
+- Contribution guidelines and pre-commit checks are documented in [CONTRIBUTING.md](CONTRIBUTING.md).
 - Bug reports, feature suggestions, and contributions are welcome via [GitHub Issues](https://github.com/thedavidweng/apple-say/issues).

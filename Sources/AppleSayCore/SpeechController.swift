@@ -55,11 +55,12 @@ public struct AudioPlacement: Equatable, Sendable {
 
     public func refresh() async throws {
         let availableVoices = try await system.voices()
-        let availableCapabilities = try await system.capabilities()
         voices = availableVoices
-        capabilities = availableCapabilities
         authorization = system.authorization()
         updatePersonalVoiceCapability()
+
+        let availableCapabilities = try await system.capabilities()
+        capabilities = availableCapabilities
     }
 
     public func authorizePersonalVoice() async throws {

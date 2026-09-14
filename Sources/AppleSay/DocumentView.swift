@@ -5,8 +5,8 @@ import UniformTypeIdentifiers
 import AppleSayCore
 
 struct DocumentView: View {
-    @Binding var document: SayDocument
-    let fileURL: URL?
+    @State private var text = ""
+    @State private var fileURL: URL?
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(AppLanguagePreference.defaultsKey) private var languagePreference = AppLanguagePreference.system.rawValue
     @AppStorage("hasShownWelcomeDocument") private var hasShownWelcomeDocument = false
@@ -20,22 +20,28 @@ struct DocumentView: View {
     @State private var showPersonalVoiceSettingsGuidance = false
     @State private var refreshing = false
 
+    init(text: String = "", fileURL: URL? = nil) {
+        _text = State(initialValue: text)
+        _fileURL = State(initialValue: fileURL)
+    }
+
     private var strings: AppStrings { AppStrings(preferenceRawValue: languagePreference) }
     private var appLanguagePreference: AppLanguagePreference {
         AppLanguagePreference(rawValue: languagePreference) ?? .system
     }
     private var busy: Bool { speech.state.isActive }
 
-    private var hasText: Bool { !document.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var hasText: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var selectedVoiceAvailable: Bool {
         settings.voice.map { selected in speech.voices.contains { $0.id == selected.id } } ?? true
     }
-    private var canPreview: Bool { hasText && !busy && !refreshing && selectedVoiceAvailable }
+    private var canPreview: Bool { hasText && !busy && selectedVoiceAvailable && !speech.voices.isEmpty }
     private var canExport: Bool { canPreview && !speech.capabilities.outputs.isEmpty }
+    private var isWelcomePromptActive: Bool { fileURL == nil && text == strings.welcomeText && !busy }
 
     var body: some View {
         VStack(spacing: 0) {
-            TextEditor(text: $document.text)
+            TextEditor(text: $text)
                 .font(.system(size: 16))
                 .padding(18)
                 .accessibilityLabel(strings.text("Document text", "文稿文本"))
@@ -47,19 +53,18 @@ struct DocumentView: View {
             statusBar
         }
         .frame(minWidth: 480, minHeight: 360)
+        .navigationTitle(fileURL?.lastPathComponent ?? (text.isEmpty ? "Apple Say" : strings.text("Untitled", "未命名")))
         .inspector(isPresented: $inspectorPresented) {
             SpeechInspector(
                 speech: speech, settings: $settings, output: $output, language: $language,
                 strings: strings, authorize: authorize
             )
             .inspectorColumnWidth(min: 270, ideal: 300, max: 360)
-            .disabled(busy || refreshing)
+            .disabled(busy || (refreshing && speech.voices.isEmpty))
         }
         .toolbar {
             ToolbarItemGroup {
-                Button(action: preview) { Label(strings.text("Preview", "播放"), systemImage: "play.fill") }
-                    .disabled(!canPreview)
-                    .help(strings.text("Preview (⌘Return)", "播放（⌘Return）"))
+                playButton
                 Button(action: speech.stop) { Label(strings.text("Stop", "停止"), systemImage: "stop.fill") }
                     .disabled(!busy)
                     .help(strings.text("Stop (⌘.)", "停止（⌘.）"))
@@ -79,6 +84,11 @@ struct DocumentView: View {
             toggleInspector: { inspectorPresented.toggle() },
             canPreview: canPreview, canStop: busy, canExport: canExport
         ))
+        .focusedSceneValue(\.documentFileActions, DocumentFileActions(
+            newDocument: newDocument,
+            openDocument: openFile,
+            saveDocument: saveFile
+        ))
         .task {
             prepareWelcomeDocument()
             await refresh()
@@ -88,6 +98,19 @@ struct DocumentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: AVSpeechSynthesizer.availableVoicesDidChangeNotification)) { _ in
             Task { await refresh() }
+        }
+        .onOpenURL { url in
+            loadFile(from: url)
+        }
+        .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+            guard let provider = providers.first else { return false }
+            _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                guard let url else { return }
+                Task { @MainActor in
+                    loadFile(from: url)
+                }
+            }
+            return true
         }
         .onDisappear { speech.stop() }
         .alert("Apple Say", isPresented: Binding(
@@ -109,6 +132,31 @@ struct DocumentView: View {
         }
     }
 
+    private var playButtonHelp: String {
+        isWelcomePromptActive
+            ? strings.text("Click to listen to Apple Say (⌘Return)", "点击试听 Apple Say（⌘Return）")
+            : strings.text("Preview (⌘Return)", "播放（⌘Return）")
+    }
+
+    @ViewBuilder private var playButton: some View {
+        let button = Button(action: preview) {
+            Label {
+                Text(strings.text("Preview", "播放"))
+            } icon: {
+                Image(systemName: "play.fill")
+                    .symbolEffect(.pulse, options: .repeating, isActive: isWelcomePromptActive)
+            }
+        }
+        .disabled(!canPreview)
+        .help(playButtonHelp)
+
+        if isWelcomePromptActive {
+            button.buttonStyle(.borderedProminent)
+        } else {
+            button
+        }
+    }
+
     private var statusBar: some View {
         HStack(spacing: 10) {
             Text(formatLabel)
@@ -117,8 +165,8 @@ struct DocumentView: View {
                     "Apple Say 会根据文稿的完整内容自动识别格式。"
                 ))
             Spacer()
-            if busy || refreshing { ProgressView().controlSize(.small) }
-            Text(refreshing ? strings.text("Loading Voices…", "正在载入声音…") : statusLabel)
+            if busy || (refreshing && speech.voices.isEmpty) { ProgressView().controlSize(.small) }
+            Text(refreshing && speech.voices.isEmpty ? strings.text("Loading Voices…", "正在载入声音…") : statusLabel)
                 .lineLimit(1)
                 .help(statusLabel)
         }
@@ -130,7 +178,7 @@ struct DocumentView: View {
     }
 
     private var formatLabel: String {
-        let parsed = SpeechController.analyze(document.text)
+        let parsed = SpeechController.analyze(text)
         switch parsed.format {
         case .plainText: return strings.text("Plain Text", "纯文本")
         case .lrc:
@@ -160,15 +208,8 @@ struct DocumentView: View {
         do {
             try await speech.refresh()
             if !hasInitializedLanguage {
-                let recommendation = VoiceRecommendation.best(
-                    among: speech.voices,
-                    preferredLanguages: appLanguagePreference.preferredVoiceLanguages
-                )
-                language = recommendation?.language ?? VoiceLanguage.systemDefault(
-                    among: speech.voices,
-                    preferredLanguages: appLanguagePreference.preferredVoiceLanguages
-                ) ?? ""
-                settings.voice = recommendation
+                settings.voice = nil
+                language = ""
                 hasInitializedLanguage = true
             }
             if let voice = settings.voice, !speech.voices.contains(where: { $0.id == voice.id }) {
@@ -185,9 +226,55 @@ struct DocumentView: View {
     }
 
     private func prepareWelcomeDocument() {
-        guard fileURL == nil, document.text.isEmpty, !hasShownWelcomeDocument else { return }
-        document.text = strings.welcomeText
+        guard fileURL == nil, text.isEmpty, !hasShownWelcomeDocument else { return }
+        text = strings.welcomeText
         hasShownWelcomeDocument = true
+    }
+
+    private func newDocument() {
+        text = ""
+        fileURL = nil
+    }
+
+    private func openFile() {
+        let panel = NSOpenPanel()
+        panel.title = strings.text("Open Document", "打开文稿")
+        panel.allowedContentTypes = [.plainText, .lrc]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        guard let window = NSApp.keyWindow else { return }
+        panel.beginSheetModal(for: window) { response in
+            guard response == .OK, let url = panel.url else { return }
+            loadFile(from: url)
+        }
+    }
+
+    private func loadFile(from url: URL) {
+        do {
+            let content = try String(contentsOf: url, encoding: .utf8)
+            text = content
+            fileURL = url
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func saveFile() {
+        let panel = NSSavePanel()
+        panel.title = strings.text("Save Document", "存储文稿")
+        panel.nameFieldStringValue = fileURL?.lastPathComponent ?? (strings.text("Untitled", "未命名") + ".txt")
+        panel.allowedContentTypes = [.plainText, .lrc]
+        panel.canCreateDirectories = true
+        guard let window = NSApp.keyWindow else { return }
+        panel.beginSheetModal(for: window) { response in
+            guard response == .OK, let url = panel.url else { return }
+            do {
+                try text.write(to: url, atomically: true, encoding: .utf8)
+                fileURL = url
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     private func authorize() {
@@ -202,7 +289,7 @@ struct DocumentView: View {
     private func preview() {
         Task {
             do {
-                try await speech.preview(text: document.text, settings: settings)
+                try await speech.preview(text: text, settings: settings)
             } catch is CancellationError {
             } catch {
                 errorMessage = error.localizedDescription
@@ -224,7 +311,7 @@ struct DocumentView: View {
             guard response == .OK, let url = panel.url else { return }
             Task { @MainActor in
                 do {
-                    try await speech.export(text: document.text, settings: settings, output: output, to: url)
+                    try await speech.export(text: text, settings: settings, output: output, to: url)
                 } catch is CancellationError {
                 } catch {
                     errorMessage = error.localizedDescription

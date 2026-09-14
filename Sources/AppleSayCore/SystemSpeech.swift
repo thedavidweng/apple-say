@@ -9,6 +9,20 @@ struct SystemVoiceMetadata: Sendable {
     let quality: VoiceQuality
 }
 
+public struct SystemVoiceInfo: Equatable, Sendable {
+    public let identifier: String
+    public let name: String
+    public let language: String
+    public let isSiri: Bool
+
+    public init(identifier: String, name: String, language: String, isSiri: Bool) {
+        self.identifier = identifier
+        self.name = name
+        self.language = language
+        self.isSiri = isSiri
+    }
+}
+
 /// The production speech boundary. `say` is the only speech synthesizer; Apple
 /// audio frameworks inspect output and capture genuine Personal Voice playback.
 @MainActor public final class SystemSpeech: SpeechSystem {
@@ -17,7 +31,7 @@ struct SystemVoiceMetadata: Sendable {
     private let personalVoice = PersonalVoiceAccess()
     private let capture = PersonalVoiceCapture()
     private var isSpeaking = false
-    private var cachedCapabilities: SpeechCapabilities?
+    private static var globalCachedCapabilities: SpeechCapabilities?
 
     public init() {}
 
@@ -89,16 +103,16 @@ struct SystemVoiceMetadata: Sendable {
     }
 
     public func capabilities() async throws -> SpeechCapabilities {
-        if let cachedCapabilities { return cachedCapabilities }
+        if let cached = Self.globalCachedCapabilities { return cached }
         let result = try await SayCapabilityDiscovery.discover(using: discovery)
-        cachedCapabilities = result
+        Self.globalCachedCapabilities = result
         return result
     }
 
     public func authorization() -> PersonalVoiceAuthorization { personalVoice.authorization() }
 
     public func requestAuthorization() async -> PersonalVoiceAuthorization {
-        cachedCapabilities = nil
+        Self.globalCachedCapabilities = nil
         return await personalVoice.requestAuthorization()
     }
 
@@ -223,6 +237,54 @@ struct SystemVoiceMetadata: Sendable {
             }
         }
         return false
+    }
+
+    nonisolated public static func currentSystemVoice(
+        preferredLanguages: [String] = Locale.preferredLanguages
+    ) -> SystemVoiceInfo? {
+        guard let defaults = UserDefaults(suiteName: "com.apple.Accessibility"),
+              let list = defaults.array(forKey: "SpokenContentDefaultVoiceSelectionsByLanguage") else {
+            return nil
+        }
+        var dict: [String: String] = [:]
+        var index = 0
+        while index < list.count {
+            if let lang = list[index] as? String, index + 1 < list.count,
+               let info = list[index + 1] as? [String: Any],
+               let voiceId = info["voiceId"] as? String {
+                dict[lang] = voiceId
+                index += 2
+            } else {
+                index += 1
+            }
+        }
+
+        var chosenVoiceId: String?
+        var chosenLang = "en"
+        for pref in preferredLanguages {
+            let prefix = String(pref.prefix(2)).lowercased()
+            if let vid = dict[prefix] {
+                chosenVoiceId = vid
+                chosenLang = pref
+                break
+            }
+            if prefix == "zh" {
+                if let vid = dict["cmn"] ?? dict["zh-CN"] ?? dict["zh"] {
+                    chosenVoiceId = vid
+                    chosenLang = pref
+                    break
+                }
+            }
+        }
+        if chosenVoiceId == nil, let first = dict.first {
+            chosenVoiceId = first.value
+            chosenLang = first.key
+        }
+
+        guard let voiceId = chosenVoiceId else { return nil }
+        let isSiri = voiceId.contains("siri")
+        let rawName = voiceId.components(separatedBy: ".").last ?? voiceId
+        return SystemVoiceInfo(identifier: voiceId, name: rawName, language: chosenLang, isSiri: isSiri)
     }
 }
 

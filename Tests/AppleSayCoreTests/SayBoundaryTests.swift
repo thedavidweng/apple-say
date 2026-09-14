@@ -72,6 +72,35 @@ final class SayBoundaryTests: XCTestCase {
         )?.id, "french")
     }
 
+    func testVoiceRecommendationPrioritizesHighestQualityAcrossPreferredLanguages() {
+        let voices = [
+            Voice(id: "chinese_compact", name: "Tingting", language: "zh_CN", quality: .compact),
+            Voice(id: "english_premium", name: "Ava (Premium)", language: "en_US", quality: .premium),
+            Voice(id: "english_compact", name: "Samantha", language: "en_US", quality: .compact)
+        ]
+        // Even though zh-Hans-CN is listed first, Ava (Premium) has far better quality and gives the best first impression
+        XCTAssertEqual(VoiceRecommendation.best(
+            among: voices,
+            preferredLanguages: ["zh-Hans-CN", "en-US"]
+        )?.id, "english_premium")
+    }
+
+    func testVoiceRecommendationRespectsLanguagePreferenceWhenQualityIsEqual() {
+        let voices = [
+            Voice(id: "chinese_compact", name: "Tingting", language: "zh_CN", quality: .compact),
+            Voice(id: "english_compact", name: "Samantha", language: "en_US", quality: .compact)
+        ]
+        // When qualities are equal, respect the user's primary language preference
+        XCTAssertEqual(VoiceRecommendation.best(
+            among: voices,
+            preferredLanguages: ["zh-Hans-CN", "en-US"]
+        )?.id, "chinese_compact")
+        XCTAssertEqual(VoiceRecommendation.best(
+            among: voices,
+            preferredLanguages: ["en-US", "zh-Hans-CN"]
+        )?.id, "english_compact")
+    }
+
     @MainActor func testVoiceMetadataMergeRejectsAmbiguousPersonalVoiceNames() {
         let catalog = [Voice(id: "Samantha", name: "Samantha", language: "en_US")]
         let metadata = [
@@ -96,6 +125,28 @@ final class SayBoundaryTests: XCTestCase {
             "-o", "/tmp/a file;name.wav", "--file-format=WAVE", "--data-format=LEI16"
         ])
         XCTAssertEqual(try SayArguments.inputText(for: request), text)
+    }
+
+    func testSystemVoiceSelectionOmitsExplicitVoiceArgument() throws {
+        var settings = SpeechSettings(voice: nil)
+        settings.speed = 180
+        let request = SpeechRequest(text: "Hello", settings: settings,
+                                    destination: URL(fileURLWithPath: "/tmp/out.aiff"),
+                                    output: ExportSettings(container: .aiff))
+        let arguments = try SayArguments.make(for: request, input: URL(fileURLWithPath: "/tmp/in.txt"))
+        XCTAssertFalse(arguments.contains("-v"))
+        XCTAssertEqual(arguments, [
+            "-r", "180", "-f", "/tmp/in.txt",
+            "-o", "/tmp/out.aiff", "--file-format=AIFF", "--data-format=BEI16"
+        ])
+    }
+
+    func testCurrentSystemVoiceInspectionDoesNotCrash() {
+        let info = SystemSpeech.currentSystemVoice()
+        if let info {
+            XCTAssertFalse(info.identifier.isEmpty)
+            XCTAssertFalse(info.name.isEmpty)
+        }
     }
 
     func testPitchUsesSpeechMarkupWithoutChangingDocument() throws {
@@ -206,5 +257,14 @@ final class SayBoundaryTests: XCTestCase {
         XCTAssertNil(lifecycle.ioProc)
         XCTAssertEqual(lifecycle.destroyObjects(), noErr)
         XCTAssertEqual(destroyedObjects.value, 2)
+    }
+
+    @MainActor func testRealCapabilityDiscoveryCompletesQuickly() async throws {
+        let runner = SayProcess()
+        let start = Date()
+        let caps = try await SayCapabilityDiscovery.discover(using: runner)
+        let elapsed = Date().timeIntervalSince(start)
+        XCTAssertFalse(caps.outputs.isEmpty)
+        XCTAssertLessThan(elapsed, 3.0, "Discovery must complete in under 3 seconds, but took \(elapsed)s")
     }
 }

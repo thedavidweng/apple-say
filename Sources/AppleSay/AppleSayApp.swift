@@ -6,23 +6,20 @@ extension UTType {
     static let lrc = UTType(importedAs: "com.thedavidweng.apple-say.lrc", conformingTo: .plainText)
 }
 
-struct SayDocument: FileDocument {
-    static var readableContentTypes: [UTType] { [.plainText, .lrc] }
-    static var writableContentTypes: [UTType] { [.plainText, .lrc] }
-    var text = ""
+struct DocumentFileActions {
+    var newDocument: () -> Void
+    var openDocument: () -> Void
+    var saveDocument: () -> Void
+}
 
-    init() {}
+private struct DocumentFileActionsKey: FocusedValueKey {
+    typealias Value = DocumentFileActions
+}
 
-    init(configuration: ReadConfiguration) throws {
-        guard let data = configuration.file.regularFileContents,
-              let text = String(data: data, encoding: .utf8) else {
-            throw CocoaError(.fileReadInapplicableStringEncoding)
-        }
-        self.text = text
-    }
-
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        FileWrapper(regularFileWithContents: Data(text.utf8))
+extension FocusedValues {
+    var documentFileActions: DocumentFileActions? {
+        get { self[DocumentFileActionsKey.self] }
+        set { self[DocumentFileActionsKey.self] = newValue }
     }
 }
 
@@ -50,14 +47,37 @@ extension FocusedValues {
 @main
 struct AppleSayApp: App {
     var body: some Scene {
-        DocumentGroup(newDocument: SayDocument()) { configuration in
-            DocumentView(document: configuration.$document, fileURL: configuration.fileURL)
+        WindowGroup {
+            DocumentView()
         }
         .defaultSize(width: 960, height: 660)
-        .commands { SpeechCommands() }
+        .commands {
+            FileCommands()
+            SpeechCommands()
+        }
 
         Settings {
             LanguageSettingsView()
+        }
+    }
+}
+
+struct FileCommands: Commands {
+    @FocusedValue(\.documentFileActions) private var fileActions
+    @AppStorage(AppLanguagePreference.defaultsKey) private var languagePreference = AppLanguagePreference.system.rawValue
+
+    private var strings: AppStrings { AppStrings(preferenceRawValue: languagePreference) }
+
+    var body: some Commands {
+        CommandGroup(replacing: .newItem) {
+            Button(strings.text("New", "新建")) { fileActions?.newDocument() }
+                .keyboardShortcut("n", modifiers: .command)
+            Button(strings.text("Open…", "打开…")) { fileActions?.openDocument() }
+                .keyboardShortcut("o", modifiers: .command)
+        }
+        CommandGroup(replacing: .saveItem) {
+            Button(strings.text("Save…", "存储…")) { fileActions?.saveDocument() }
+                .keyboardShortcut("s", modifiers: .command)
         }
     }
 }

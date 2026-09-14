@@ -8,6 +8,7 @@ struct SpeechInspector: View {
     @Binding var language: String
     let strings: AppStrings
     let authorize: () -> Void
+    @State private var showVoiceQualityInfo = false
 
     private var languages: [String] { Array(Set(speech.voices.map(\.language))).sorted() }
     private var visibleVoices: [Voice] { speech.voices.filter { language.isEmpty || $0.language == language } }
@@ -29,10 +30,74 @@ struct SpeechInspector: View {
                 .help(strings.text("Filters the Voice list. Document text stays unchanged.", "筛选声音列表，不会更改文稿文本。"))
                 LabeledContent(strings.text("Voice", "声音")) {
                     VoicePopUp(voices: visibleVoices, selection: $settings.voice, strings: strings)
-                        .frame(minWidth: 130)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+                .help(strings.text(
+                    "Choose a Voice, or choose “Add Voices…” from the menu to install higher quality voices.",
+                    "选择声音，或从菜单中选择“添加声音…”安装更高品质的声音。"
+                ))
+                LabeledContent {
+                    HStack(spacing: 6) {
+                        let display = currentVoiceQualityDisplay
+                        Circle()
+                            .fill(display.color)
+                            .frame(width: 7, height: 7)
+                        Text(display.title)
+                            .foregroundStyle(display.color)
+                            .fontWeight(.medium)
+                        Button {
+                            showVoiceQualityInfo.toggle()
+                        } label: {
+                            Image(systemName: "info.circle")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help(strings.text("Voice Quality Guide", "声音品质说明"))
+                        .popover(isPresented: $showVoiceQualityInfo, arrowEdge: .trailing) {
+                            VoiceQualityHelpView(strings: strings)
+                        }
+                    }
+                } label: {
+                    Text(strings.text("Voice Quality", "声音品质"))
+                }
+                if let voice = settings.voice {
+                    if voice.quality < .enhanced && !voice.isPersonal {
+                        Text(strings.text(
+                            "Default system voices sound mechanical. Choose “Add Voices…” from the Voice menu to install Enhanced or Premium voices.",
+                            "系统默认声音偏机械。可从“声音”菜单中选择“添加声音…”，在系统设置中安装增强或高级声音。"
+                        ))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                } else {
+                    let info = systemVoiceInfo
+                    if info?.isSiri != true {
+                        Text(strings.text(
+                            "Default system voices sound mechanical. Choose “Add Voices…” from the Voice menu to install Enhanced or Premium voices.",
+                            "系统默认声音偏机械。可从“声音”菜单中选择“添加声音…”，在系统设置中安装增强或高级声音。"
+                        ))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
                 }
                 LabeledContent(strings.text("Speech Speed", "语速")) {
-                    Text(strings.text("\(settings.speed) words/min", "每分钟 \(settings.speed) 字")).monospacedDigit()
+                    HStack(spacing: 6) {
+                        Text(strings.text("\(settings.speed) words/min", "每分钟 \(settings.speed) 字")).monospacedDigit()
+                        if settings.speed != SpeechSettings().speed {
+                            Button {
+                                settings.speed = SpeechSettings().speed
+                            } label: {
+                                Image(systemName: "arrow.counterclockwise")
+                                    .imageScale(.small)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.secondary)
+                            .help(strings.text(
+                                "Reset Speech Speed to default (\(SpeechSettings().speed) words/min)",
+                                "还原语速为默认值（每分钟 \(SpeechSettings().speed) 字）"
+                            ))
+                        }
+                    }
                 }
                 Slider(value: Binding(
                     get: { Double(settings.speed) }, set: { settings.speed = Int($0.rounded()) }
@@ -199,6 +264,182 @@ struct SpeechInspector: View {
                 "The name of an available system network audio service.",
                 "可用系统网络音频服务的名称。"
             ))
+        }
+    }
+
+    private func qualityLabel(for voice: Voice) -> String {
+        if voice.isPersonal {
+            return strings.text("Personal Voice", "个人声音")
+        }
+        if voice.isNovelty {
+            return strings.text("Novelty", "趣味声音")
+        }
+        return strings.qualityName(voice.quality)
+    }
+
+    private var currentVoiceQualityDisplay: (title: String, color: Color) {
+        if let voice = settings.voice {
+            let label = qualityLabel(for: voice)
+            let color = VoiceQualityTheme.color(
+                for: voice.quality,
+                isPersonal: voice.isPersonal,
+                isNovelty: voice.isNovelty
+            )
+            return (label, color)
+        } else {
+            if let info = systemVoiceInfo, info.isSiri {
+                return (strings.text("Siri Natural", "Siri 自然声音"), VoiceQualityTheme.siri)
+            } else {
+                return (strings.text("System Configured", "系统设定"), VoiceQualityTheme.compact)
+            }
+        }
+    }
+
+    private var systemVoiceInfo: SystemVoiceInfo? {
+        SystemSpeech.currentSystemVoice(
+            preferredLanguages: language.isEmpty ? Locale.preferredLanguages : [language]
+        )
+    }
+}
+
+enum VoiceQualityTheme {
+    static let siri = Color.purple
+    static let premium = Color.orange
+    static let enhanced = Color.green
+    static let compact = Color.blue
+    static let legacy = Color.secondary
+    static let novelty = Color.pink
+    static let personal = Color.indigo
+
+    static func color(for quality: VoiceQuality, isPersonal: Bool = false, isNovelty: Bool = false) -> Color {
+        if isPersonal { return personal }
+        if isNovelty { return novelty }
+        switch quality {
+        case .premium: return premium
+        case .enhanced: return enhanced
+        case .compact: return compact
+        case .legacy, .standard: return legacy
+        }
+    }
+}
+
+struct VoiceQualityHelpView: View {
+    let strings: AppStrings
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(strings.text("Voice Qualities", "声音品质说明"))
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: 12) {
+                qualityRow(
+                    name: strings.text("Siri Voice", "Siri 声音"),
+                    badge: strings.text("Most Natural", "最自然"),
+                    badgeColor: VoiceQualityTheme.siri,
+                    description: strings.text(
+                        "Apple's most natural neural voice. In macOS, it cannot be called directly by name, "
+                            + "but can be used by choosing “System Voice” when configured in macOS Accessibility settings.",
+                        "苹果最自然的神经网络拟真语音。在 macOS 中无法通过名称直接指定，"
+                            + "但只要在系统设置的辅助功能中设为系统声音，并在本软件中选择“系统声音”，即可直接使用并支持导出。"
+                    )
+                )
+
+                Divider()
+
+                qualityRow(
+                    name: strings.text("Premium", "高级"),
+                    badge: strings.text("High Fidelity", "高保真"),
+                    badgeColor: VoiceQualityTheme.premium,
+                    description: strings.text(
+                        "High-definition, highly expressive natural voice (~500MB+). Requires downloading in macOS Accessibility settings.",
+                        "细节丰富、拟真度与表现力极高的高保真声音（体积通常 500MB 以上）。可在 macOS 辅助功能设置中下载。"
+                    )
+                )
+
+                Divider()
+
+                qualityRow(
+                    name: strings.text("Enhanced", "增强"),
+                    badge: strings.text("Natural", "自然"),
+                    badgeColor: VoiceQualityTheme.enhanced,
+                    description: strings.text(
+                        "Smooth synthesis with natural intonation (~200MB). Requires downloading in macOS Accessibility settings.",
+                        "语调平滑自然、发音连贯的增强合成声音（体积约 200MB）。可在 macOS 辅助功能设置中下载。"
+                    )
+                )
+
+                Divider()
+
+                qualityRow(
+                    name: strings.text("Compact", "精简"),
+                    badge: strings.text("Standard", "标准"),
+                    badgeColor: VoiceQualityTheme.compact,
+                    description: strings.text(
+                        "Lightweight voice pre-installed with macOS (~15MB). Fast and resource-friendly, but sounds somewhat mechanical.",
+                        "macOS 默认预装的轻量级声音（体积约 15MB）。体积小、响应快，但声音偏机械感。"
+                    )
+                )
+
+                Divider()
+
+                qualityRow(
+                    name: strings.text("Legacy", "经典"),
+                    badge: strings.text("Compatibility", "兼容"),
+                    badgeColor: VoiceQualityTheme.legacy,
+                    description: strings.text(
+                        "Classic macOS synthesizer voices retained for historical compatibility.",
+                        "早期 Mac 系统保留的经典合成声音，主要用于向后兼容历史系统。"
+                    )
+                )
+
+                Divider()
+
+                qualityRow(
+                    name: strings.text("Novelty", "趣味声音"),
+                    badge: strings.text("Special Effects", "特殊音效"),
+                    badgeColor: VoiceQualityTheme.novelty,
+                    description: strings.text(
+                        "Sound-effect voices (such as Bells, Cellos, Bubbles, Zarvox) for creative or playful scenarios.",
+                        "特殊音效与趣味声音（如 Bells、Cellos、Bubbles、Zarvox 等），适合特殊创意或趣味场景。"
+                    )
+                )
+            }
+
+            HStack {
+                Spacer()
+                Button(strings.text("Open Accessibility Settings…", "打开辅助功能设置…")) {
+                    VoiceManagement.open(.voices)
+                }
+                .buttonStyle(.link)
+                .font(.footnote)
+            }
+        }
+        .padding(16)
+        .frame(width: 350)
+    }
+
+    private func qualityRow(name: String, badge: String, badgeColor: Color, description: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(badgeColor)
+                    .frame(width: 8, height: 8)
+                Text(name)
+                    .font(.subheadline.bold())
+                Spacer()
+                Text(badge)
+                    .font(.caption2.bold())
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(badgeColor.opacity(0.18))
+                    .foregroundStyle(badgeColor)
+                    .clipShape(Capsule())
+            }
+            Text(description)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 16)
         }
     }
 }

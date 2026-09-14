@@ -48,6 +48,10 @@ _Avoid_: Overflow Fix, Auto Recovery
 A speech voice that macOS makes available for use by `say`.
 _Avoid_: Speaker, Character
 
+**System Voice**:
+The default voice configured in macOS Accessibility Spoken Content settings. System Voice is a first-class voice selection in Apple Say. When selected, Apple Say invokes `/usr/bin/say` without an explicit `-v`, preserving the macOS Spoken Content system voice. This may enable Siri Natural voices on macOS versions where the system speech pipeline exposes them through the default voice path. Apple Say does not attempt to address Siri Natural voices explicitly through private identifiers or private frameworks.
+_Avoid_: System Default, Default Voice
+
 **Voice Language**:
 The locale associated with a Voice and used to filter the Voice list. It does not independently change the language of the Document.
 _Avoid_: Document Language, Translation Language

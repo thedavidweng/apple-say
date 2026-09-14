@@ -15,6 +15,9 @@
     <a href="README.md"><strong>English</strong></a> •
     <a href="README_zh.md"><strong>简体中文</strong></a>
   </p>
+
+  <br />
+  <img src="public/screenshot.png" alt="Apple Say 主窗口界面" width="800" />
 </div>
 
 ---
@@ -29,7 +32,7 @@
 
 - 📄 **原生 macOS 文档体验**：采用标准 macOS 文档架构，完整支持多标签页、自动保存、历史版本追踪与 UTF-8 编码。
 - ⏱️ **智能时间轴自适应**：无缝支持纯文本、LRC（行级时间戳）与增强型 LRC（字/片段级时间戳）。时间戳决定音频的绝对出现时刻，Apple Say 会自动测算渲染时长并在必要时动态加速语速，确保文字紧密契合下一个时间戳，绝不产生重叠或断句裁切。
-- 🗣️ **系统声音与个人声音支持**：即时识别系统中已安装的所有语音，支持按语言筛选；更能调用经授权的 Apple **个人声音（Personal Voice）** 进行试听与导出。
+- 🗣️ **系统声音与个人声音支持**：即时识别系统中已安装的所有语音，支持按语言筛选；原生支持 **系统声音（System Voice）**（无缝接入 Siri 自然拟真声音），更能调用经授权的 Apple **个人声音（Personal Voice）** 进行试听与导出。
 - 🎛️ **专业的语音检视器（Speech Inspector）**：灵活调节语速与音高，自由选择输出容器格式（AAC、AIFF、WAV、CAF），并可深入配置声道数、采样率、比特率及音频转换质量。
 - 🎧 **即时试听与音频导出**：通过便捷的快捷键随时试听播放当前段落，或通过 macOS 标准存储面板导出专业级音频文件。
 - 🔒 **100% 离线与隐私安全**：完全在本地离线运行，零网络请求、零行为遥测、零数据搜集，不依赖任何第三方运行时。
@@ -142,7 +145,8 @@ Apple Say 不会收集、存储、上传或共享任何个人数据。
 
 ---
 
-## 📄 规范与问题反馈
+## 📄 规范与参与贡献
 
 - 项目领域词汇与设计规范详见 [CONTEXT.md](CONTEXT.md)。
+- 代码贡献准则与提交前检查清单详见 [CONTRIBUTING_zh.md](CONTRIBUTING_zh.md)。
 - 欢迎通过 [GitHub Issues](https://github.com/thedavidweng/apple-say/issues) 提交问题反馈、功能建议或贡献代码。

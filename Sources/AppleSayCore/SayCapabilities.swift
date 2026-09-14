@@ -36,22 +36,18 @@ enum SayCatalog {
     static func discover(using runner: SayProcess) async throws -> SpeechCapabilities {
         let formats = try await runner.run(arguments: ["--file-format=?"]).checked()
         let supported = Set(SayCatalog.identifiers(from: formats))
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let input = directory.appendingPathComponent("capability-probe.txt")
-        // One millisecond is enough to prove the converter emitted frames while
-        // keeping the first-launch capability scan independent of speech duration.
-        try "[[slnc 1]]".write(to: input, atomically: true, encoding: .utf8)
-        let outputs = try await withThrowingTaskGroup(of: OutputCapability?.self) { group in
-            for container in AudioContainer.allCases where supported.contains(container.sayFormat) {
-                group.addTask {
-                    try await discoverOutput(container, directory: directory, input: input, runner: runner)
-                }
+        var aacBitRates: [Int] = []
+        if supported.contains("m4af") || supported.contains("caff") {
+            let rates = try await runner.run(arguments: ["--file-format=m4af", "--data-format=aac", "--bit-rate=?"])
+            if rates.status == 0 {
+                aacBitRates = SayCatalog.identifiers(from: rates.standardOutput).compactMap(Int.init)
             }
-            var values: [OutputCapability] = []
-            for try await output in group { if let output { values.append(output) } }
-            return values.sorted { AudioContainer.allCases.firstIndex(of: $0.container)! < AudioContainer.allCases.firstIndex(of: $1.container)! }
+        }
+        var outputs: [OutputCapability] = []
+        for container in AudioContainer.allCases where supported.contains(container.sayFormat) {
+            if let output = try await discoverOutput(container, aacBitRates: aacBitRates, runner: runner) {
+                outputs.append(output)
+            }
         }
         let devices = try await runner.run(arguments: ["--audio-device=?"]).checked()
         var component = AudioComponentDescription(componentType: kAudioUnitType_Effect,
@@ -63,73 +59,32 @@ enum SayCatalog {
                                   supportsNetworkAudio: hasNetworkAudio)
     }
 
-    private static func discoverOutput(_ container: AudioContainer, directory: URL, input: URL,
+    private static func discoverOutput(_ container: AudioContainer, aacBitRates: [Int],
                                        runner: SayProcess) async throws -> OutputCapability? {
-        let destination = directory.appendingPathComponent("probe.\(container.rawValue)")
-        let base = ["--file-format=\(container.sayFormat)", "-o", destination.path]
-        let listing = try await runner.run(arguments: base + ["--data-format=?"]).checked()
+        let listing = try await runner.run(arguments: ["--file-format=\(container.sayFormat)", "--data-format=?"]).checked()
         let listedFormats = SayCatalog.identifiers(from: listing).flatMap { identifier -> [String] in
             if identifier == "lpcm" { return pcmCandidates(for: container) }
             return usefulCompressedFormats(for: container).contains(identifier) ? [identifier] : []
         }
         var formats: [String] = []
         for format in listedFormats where !formats.contains(format) { formats.append(format) }
-        let profiles = try await withThrowingTaskGroup(of: AudioDataCapability?.self) { group in
-            for format in formats {
-                group.addTask {
-                    try await discoverProfile(format, container: container, directory: directory,
-                                              input: input, runner: runner)
-                }
-            }
-            var values: [AudioDataCapability] = []
-            for try await profile in group { if let profile { values.append(profile) } }
-            return values.sorted { left, right in
-                if left.dataFormat == container.defaultDataFormat { return true }
-                if right.dataFormat == container.defaultDataFormat { return false }
-                return left.dataFormat < right.dataFormat
-            }
+        let profiles = formats.map { format in
+            discoverProfile(format, container: container, aacBitRates: aacBitRates)
+        }.sorted { left, right in
+            if left.dataFormat == container.defaultDataFormat { return true }
+            if right.dataFormat == container.defaultDataFormat { return false }
+            return left.dataFormat < right.dataFormat
         }
         return profiles.isEmpty ? nil : OutputCapability(container: container, profiles: profiles)
     }
 
-    private static func discoverProfile(_ format: String, container: AudioContainer, directory: URL, input: URL,
-                                        runner: SayProcess) async throws -> AudioDataCapability? {
-        let destination = directory.appendingPathComponent("profile-\(UUID().uuidString).\(container.rawValue)")
-        let base = ["-r", "500", "--file-format=\(container.sayFormat)", "--data-format=\(format)", "-o", destination.path]
-        var channels: [Int] = []
-        for count in [1, 2] {
-            try removeIfPresent(destination)
-            let result = try await runner.run(arguments: base + ["--channels=\(count)", "-f", input.path])
-            if result.status == 0, validAudio(at: destination) { channels.append(count) }
-        }
-        if channels.isEmpty {
-            try removeIfPresent(destination)
-            let result = try await runner.run(arguments: base + ["-f", input.path])
-            guard result.status == 0, validAudio(at: destination) else { return nil }
-        }
-        var bitRates: [Int] = []
-        let rates = try await runner.run(arguments: base + ["--bit-rate=?"])
-        if rates.status == 0 {
-            bitRates = SayCatalog.identifiers(from: rates.standardOutput).compactMap(Int.init)
-        }
-        let isPCM = format.hasPrefix("BE") || format.hasPrefix("LE")
-        var supportsQuality = false
-        if !isPCM {
-            try removeIfPresent(destination)
-            let quality = try await runner.run(arguments: base + ["--quality=96", "-f", input.path])
-            supportsQuality = quality.status == 0 && validAudio(at: destination)
-        }
+    private static func discoverProfile(_ format: String, container: AudioContainer,
+                                        aacBitRates: [Int]) -> AudioDataCapability {
+        let channels = [1, 2]
+        let bitRates = (format == "aac") ? aacBitRates : []
+        let supportsQuality = (format == "aac")
         return AudioDataCapability(dataFormat: format, channels: channels, bitRates: bitRates,
                                    supportsQuality: supportsQuality)
-    }
-
-    private static func removeIfPresent(_ url: URL) throws {
-        if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
-    }
-
-    private static func validAudio(at url: URL) -> Bool {
-        guard FileManager.default.fileExists(atPath: url.path) else { return false }
-        return (try? AudioFiles.duration(of: url)) != nil
     }
 
     private static func pcmCandidates(for container: AudioContainer) -> [String] {

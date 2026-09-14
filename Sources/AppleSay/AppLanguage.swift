@@ -1,3 +1,4 @@
+import AppleSayCore
 import Foundation
 import SwiftUI
 
@@ -60,6 +61,16 @@ struct AppStrings {
             "Welcome to Apple Say. Press the Play button in the top-right corner to hear this sentence.",
             "欢迎使用 Apple Say。点击右上角的播放按钮，即可听到这句话。"
         )
+    }
+
+    func qualityName(_ quality: VoiceQuality) -> String {
+        switch quality {
+        case .legacy: return text("Legacy", "经典")
+        case .compact: return text("Compact", "精简")
+        case .standard: return text("Standard", "标准")
+        case .enhanced: return text("Enhanced", "增强")
+        case .premium: return text("Premium", "高级")
+        }
     }
 }
 

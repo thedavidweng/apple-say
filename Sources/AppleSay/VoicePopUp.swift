@@ -22,6 +22,17 @@ enum VoiceManagement {
     }
 }
 
+final class TruncatingPopUpButton: NSPopUpButton {
+    override var intrinsicContentSize: NSSize {
+        let base = super.intrinsicContentSize
+        guard let title = selectedItem?.title ?? titleOfSelectedItem else { return base }
+        let font = self.font ?? NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        let titleWidth = (title as NSString).size(withAttributes: [.font: font]).width
+        let width = min(max(titleWidth + 36, 120), 190)
+        return NSSize(width: width, height: base.height)
+    }
+}
+
 /// AppKit's pop-up preserves native keyboard/menu behavior while allowing management
 /// actions after the selectable Voices, which SwiftUI Picker does not represent.
 struct VoicePopUp: NSViewRepresentable {
@@ -32,10 +43,13 @@ struct VoicePopUp: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     func makeNSView(context: Context) -> NSPopUpButton {
-        let button = NSPopUpButton(frame: .zero, pullsDown: false)
+        let button = TruncatingPopUpButton(frame: .zero, pullsDown: false)
         context.coordinator.button = button
         button.setAccessibilityLabel(strings.text("Voice", "声音"))
-        button.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        button.setContentHuggingPriority(.defaultHigh, for: .horizontal)
+        button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        button.lineBreakMode = .byTruncatingTail
+        (button.cell as? NSPopUpButtonCell)?.lineBreakMode = .byTruncatingTail
         return button
     }
 
@@ -44,11 +58,12 @@ struct VoicePopUp: NSViewRepresentable {
         button.removeAllItems()
         button.setAccessibilityLabel(strings.text("Voice", "声音"))
         let defaultItem = NSMenuItem(
-            title: strings.text("System Default", "系统默认"),
+            title: strings.text("System Voice", "系统声音"),
             action: #selector(Coordinator.selectVoice(_:)), keyEquivalent: ""
         )
         defaultItem.target = context.coordinator
         button.menu?.addItem(defaultItem)
+        button.menu?.addItem(.separator())
         var listedVoices = voices
         // A locale filter narrows choices without changing the active speech settings.
         if let selection, !listedVoices.contains(where: { $0.id == selection.id }) {
@@ -56,7 +71,7 @@ struct VoicePopUp: NSViewRepresentable {
         }
         for voice in listedVoices {
             let item = NSMenuItem(
-                title: voice.name + (voice.isPersonal ? strings.text(" (Personal Voice)", "（个人声音）") : ""),
+                title: title(for: voice),
                 action: #selector(Coordinator.selectVoice(_:)), keyEquivalent: ""
             )
             item.representedObject = voice.id
@@ -75,6 +90,30 @@ struct VoicePopUp: NSViewRepresentable {
         }
         if selection == nil { button.select(defaultItem) }
         button.isEnabled = context.environment.isEnabled
+        button.invalidateIntrinsicContentSize()
+    }
+
+    private func title(for voice: Voice) -> String {
+        var title = voice.name
+        if voice.isPersonal {
+            title += strings.text(" (Personal Voice)", "（个人声音）")
+        } else if voice.isNovelty {
+            title += strings.text(" (Novelty)", "（趣味声音）")
+        } else {
+            switch voice.quality {
+            case .premium:
+                title += strings.text(" (Premium)", "（高级）")
+            case .enhanced:
+                title += strings.text(" (Enhanced)", "（增强）")
+            case .compact:
+                title += strings.text(" (Compact)", "（精简）")
+            case .legacy:
+                title += strings.text(" (Legacy)", "（经典）")
+            case .standard:
+                break
+            }
+        }
+        return title
     }
 
     @MainActor final class Coordinator: NSObject {

@@ -33,11 +33,28 @@ public enum VoiceRecommendation {
 
     public static func best(among voices: [Voice], preferredLanguages: [String]) -> Voice? {
         let candidates = ranked(voices)
-        guard let language = VoiceLanguage.systemDefault(
-            among: candidates,
-            preferredLanguages: preferredLanguages
-        ) else { return nil }
-        return candidates.first { $0.language == language }
+        guard !candidates.isEmpty else { return nil }
+
+        var languageCandidates: [(voice: Voice, languageIndex: Int)] = []
+        for (index, preference) in preferredLanguages.enumerated() {
+            if let matchedLocale = VoiceLanguage.systemDefault(among: candidates, preferredLanguages: [preference]),
+               let bestInLocale = candidates.first(where: { $0.language == matchedLocale }) {
+                if !languageCandidates.contains(where: { $0.voice.id == bestInLocale.id }) {
+                    languageCandidates.append((voice: bestInLocale, languageIndex: index))
+                }
+            }
+        }
+
+        if let bestQuality = languageCandidates.max(by: { first, second in
+            if first.voice.quality != second.voice.quality {
+                return first.voice.quality < second.voice.quality
+            }
+            return first.languageIndex > second.languageIndex
+        }) {
+            return bestQuality.voice
+        }
+
+        return candidates.first
     }
 
     private static func ranked(_ voices: [Voice]) -> [Voice] {
