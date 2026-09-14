@@ -123,14 +123,25 @@ struct DocumentView: View {
     }
 
     private var documentEditor: some View {
-        TextEditor(text: $text)
-            .font(.system(size: 16))
-            .padding(18)
-            .accessibilityLabel(strings.text("Document text", "文稿文本"))
-            .accessibilityHint(strings.text(
-                "Enter Plain Text, LRC, or Enhanced LRC to speak.",
-                "输入纯文本、LRC 或增强型 LRC 后即可播放。"
-            ))
+        ZStack(alignment: .topLeading) {
+            TextEditor(text: $text)
+                .font(.system(size: 16))
+                .padding(18)
+                .accessibilityLabel(strings.text("Document text", "文稿文本"))
+                .accessibilityHint(strings.text(
+                    "Enter Plain Text, LRC, or Enhanced LRC to speak.",
+                    "输入纯文本、LRC 或增强型 LRC 后即可播放。"
+                ))
+            if text.isEmpty {
+                Text(strings.text("Enter text to speak…", "输入要朗读的文本…"))
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color(nsColor: .placeholderTextColor))
+                    .padding(.top, 18)
+                    .padding(.leading, 23)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
     }
 
     @ToolbarContentBuilder private var speechToolbar: some ToolbarContent {
