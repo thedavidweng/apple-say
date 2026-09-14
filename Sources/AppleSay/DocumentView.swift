@@ -16,7 +16,7 @@ private struct DocumentTextEditor: NSViewRepresentable {
 
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSTextView.scrollableTextView()
-        let textView = scrollView.documentView as! NSTextView
+        let textView = textView(in: scrollView)
 
         scrollView.borderType = .noBorder
         scrollView.drawsBackground = true
@@ -41,7 +41,7 @@ private struct DocumentTextEditor: NSViewRepresentable {
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         context.coordinator.parent = self
-        let textView = scrollView.documentView as! NSTextView
+        let textView = textView(in: scrollView)
         configureTextContainer(textView)
         if textView.string != text {
             textView.string = text
@@ -53,6 +53,13 @@ private struct DocumentTextEditor: NSViewRepresentable {
     private func configureTextContainer(_ textView: NSTextView) {
         textView.textContainerInset = NSSize(width: 20, height: 16)
         textView.textContainer?.lineFragmentPadding = 0
+    }
+
+    private func textView(in scrollView: NSScrollView) -> NSTextView {
+        guard let textView = scrollView.documentView as? NSTextView else {
+            preconditionFailure("NSTextView.scrollableTextView() must contain an NSTextView document view")
+        }
+        return textView
     }
 
     final class Coordinator: NSObject, NSTextViewDelegate {
