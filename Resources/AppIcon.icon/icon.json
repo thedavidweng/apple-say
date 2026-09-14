@@ -34,22 +34,6 @@
         "enabled" : true,
         "value" : 0.2
       }
-    },
-    {
-      "layers" : [
-        {
-          "image-name" : "BackgroundWaves.svg",
-          "name" : "Background Waves"
-        }
-      ],
-      "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0.18
-      },
-      "translucency" : {
-        "enabled" : true,
-        "value" : 0.72
-      }
     }
   ],
   "supported-platforms" : {
