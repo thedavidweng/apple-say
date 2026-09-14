@@ -10,7 +10,16 @@ rm -rf "$application"
 mkdir -p "$application/Contents/MacOS" "$application/Contents/Resources"
 cp "$binary_directory/AppleSay" "$application/Contents/MacOS/AppleSay"
 cp "$project_root/Resources/Info.plist" "$application/Contents/Info.plist"
-cp "$project_root/Resources/AppIcon.icns" "$application/Contents/Resources/AppIcon.icns"
+xcrun actool \
+    --compile "$application/Contents/Resources" \
+    --platform macosx \
+    --minimum-deployment-target 14.0 \
+    --target-device mac \
+    --app-icon AppIcon \
+    --output-partial-info-plist "$application/Contents/icon-info.plist" \
+    "$project_root/Resources/AppIcon.icon"
+/usr/libexec/PlistBuddy -c "Merge '$application/Contents/icon-info.plist'" "$application/Contents/Info.plist"
+rm "$application/Contents/icon-info.plist"
 cp "$project_root/Resources/Credits.html" "$application/Contents/Resources/Credits.html"
 for localization in "$project_root"/Resources/*.lproj; do
     ditto "$localization" "$application/Contents/Resources/$(basename "$localization")"

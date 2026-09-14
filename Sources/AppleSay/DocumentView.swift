@@ -40,18 +40,7 @@ struct DocumentView: View {
     private var isWelcomePromptActive: Bool { fileURL == nil && text == strings.welcomeText && !busy }
 
     var body: some View {
-        VStack(spacing: 0) {
-            TextEditor(text: $text)
-                .font(.system(size: 16))
-                .padding(18)
-                .accessibilityLabel(strings.text("Document text", "文稿文本"))
-                .accessibilityHint(strings.text(
-                    "Enter Plain Text, LRC, or Enhanced LRC to speak.",
-                    "输入纯文本、LRC 或增强型 LRC 后即可播放。"
-                ))
-            Divider()
-            statusBar
-        }
+        documentCanvas
         .frame(minWidth: 480, minHeight: 360)
         .navigationTitle(fileURL?.lastPathComponent ?? (text.isEmpty ? "Apple Say" : strings.text("Untitled", "未命名")))
         .inspector(isPresented: $inspectorPresented) {
@@ -62,23 +51,7 @@ struct DocumentView: View {
             .inspectorColumnWidth(min: 270, ideal: 300, max: 360)
             .disabled(busy || (refreshing && speech.voices.isEmpty))
         }
-        .toolbar {
-            ToolbarItemGroup {
-                playButton
-                Button(action: speech.stop) { Label(strings.text("Stop", "停止"), systemImage: "stop.fill") }
-                    .disabled(!busy)
-                    .help(strings.text("Stop (⌘.)", "停止（⌘.）"))
-                Button(action: export) { Label(strings.text("Export", "导出"), systemImage: "square.and.arrow.up") }
-                    .disabled(!canExport)
-                    .help(strings.text("Export Audio (⇧⌘E)", "导出音频（⇧⌘E）"))
-            }
-            ToolbarItem(placement: .automatic) {
-                Button { inspectorPresented.toggle() } label: {
-                    Label(strings.text("Speech Inspector", "语音检查器"), systemImage: "sidebar.right")
-                }
-                .help(strings.text("Show or hide Speech Inspector (⌥⌘I)", "显示或隐藏语音检查器（⌥⌘I）"))
-            }
-        }
+        .toolbar { speechToolbar }
         .focusedSceneValue(\.speechActions, SpeechActions(
             preview: preview, stop: speech.stop, export: export,
             toggleInspector: { inspectorPresented.toggle() },
@@ -132,6 +105,60 @@ struct DocumentView: View {
         }
     }
 
+    @ViewBuilder private var documentCanvas: some View {
+        if #available(macOS 26.0, *) {
+            documentEditor
+                .safeAreaBar(edge: .bottom, spacing: 0) {
+                    liquidStatusBar
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                }
+        } else {
+            VStack(spacing: 0) {
+                documentEditor
+                Divider()
+                statusBar
+            }
+        }
+    }
+
+    private var documentEditor: some View {
+        TextEditor(text: $text)
+            .font(.system(size: 16))
+            .padding(18)
+            .accessibilityLabel(strings.text("Document text", "文稿文本"))
+            .accessibilityHint(strings.text(
+                "Enter Plain Text, LRC, or Enhanced LRC to speak.",
+                "输入纯文本、LRC 或增强型 LRC 后即可播放。"
+            ))
+    }
+
+    @ToolbarContentBuilder private var speechToolbar: some ToolbarContent {
+        if #available(macOS 26.0, *) {
+            ToolbarItemGroup {
+                liquidPlayButton
+                stopButton
+            }
+            ToolbarSpacer(.fixed)
+            ToolbarItem(placement: .automatic) {
+                exportButton
+            }
+            ToolbarSpacer(.flexible)
+            ToolbarItem(placement: .automatic) {
+                inspectorButton
+            }
+        } else {
+            ToolbarItemGroup {
+                legacyPlayButton
+                stopButton
+                exportButton
+            }
+            ToolbarItem(placement: .automatic) {
+                inspectorButton
+            }
+        }
+    }
+
     private var playButtonHelp: String {
         isWelcomePromptActive
             ? strings.text("Click to listen to Apple Say (⌘Return)", "点击试听 Apple Say（⌘Return）")
@@ -139,7 +166,7 @@ struct DocumentView: View {
     }
 
     @ViewBuilder private var playButton: some View {
-        let button = Button(action: preview) {
+        Button(action: preview) {
             Label {
                 Text(strings.text("Preview", "播放"))
             } icon: {
@@ -149,12 +176,38 @@ struct DocumentView: View {
         }
         .disabled(!canPreview)
         .help(playButtonHelp)
+    }
 
+    @available(macOS 26.0, *)
+    private var liquidPlayButton: some View {
+        playButton.buttonStyle(.glassProminent)
+    }
+
+    @ViewBuilder private var legacyPlayButton: some View {
         if isWelcomePromptActive {
-            button.buttonStyle(.borderedProminent)
+            playButton.buttonStyle(.borderedProminent)
         } else {
-            button
+            playButton
         }
+    }
+
+    private var stopButton: some View {
+        Button(action: speech.stop) { Label(strings.text("Stop", "停止"), systemImage: "stop.fill") }
+            .disabled(!busy)
+            .help(strings.text("Stop (⌘.)", "停止（⌘.）"))
+    }
+
+    private var exportButton: some View {
+        Button(action: export) { Label(strings.text("Export", "导出"), systemImage: "square.and.arrow.up") }
+            .disabled(!canExport)
+            .help(strings.text("Export Audio (⇧⌘E)", "导出音频（⇧⌘E）"))
+    }
+
+    private var inspectorButton: some View {
+        Button { inspectorPresented.toggle() } label: {
+            Label(strings.text("Speech Inspector", "语音检查器"), systemImage: "sidebar.right")
+        }
+        .help(strings.text("Show or hide Speech Inspector (⌥⌘I)", "显示或隐藏语音检查器（⌥⌘I）"))
     }
 
     private var statusBar: some View {
@@ -174,6 +227,33 @@ struct DocumentView: View {
         .foregroundStyle(.secondary)
         .padding(.horizontal, 16)
         .padding(.vertical, 9)
+        .accessibilityElement(children: .combine)
+    }
+
+    @available(macOS 26.0, *)
+    private var liquidStatusBar: some View {
+        HStack(spacing: 10) {
+            Text(formatLabel)
+                .help(strings.text(
+                    "Document format is detected automatically from its complete contents.",
+                    "Apple Say 会根据文稿的完整内容自动识别格式。"
+                ))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .glassEffect(.regular, in: .capsule)
+            Spacer(minLength: 12)
+            HStack(spacing: 7) {
+                if busy || (refreshing && speech.voices.isEmpty) { ProgressView().controlSize(.small) }
+                Text(refreshing && speech.voices.isEmpty ? strings.text("Loading Voices…", "正在载入声音…") : statusLabel)
+                    .lineLimit(1)
+                    .help(statusLabel)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .glassEffect(.regular, in: .capsule)
+        }
+        .font(.callout)
+        .foregroundStyle(.secondary)
         .accessibilityElement(children: .combine)
     }
 

@@ -7,7 +7,6 @@
     <key>CFBundleName</key><string>Apple Say</string>
     <key>CFBundleExecutable</key><string>AppleSay</string>
     <key>CFBundleIdentifier</key><string>com.thedavidweng.apple-say</string>
-    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
     <key>CFBundleLocalizations</key>
     <array><string>en</string><string>zh-Hans</string></array>

@@ -57,4 +57,4 @@ Apple Say 将 Mac 上已有的声音变成一款专注、原生的文本与音�
 - Provide at least one localized 16:10 macOS screenshot at an accepted App Store
   Connect size, such as 2880 × 1800 pixels.
 - Complete the age-rating questionnaire with no restricted content selected.
-- Use `Resources/AppIcon.png` as the 1024 × 1024 App Store icon source.
+- Use the layered `Resources/AppIcon.icon` as the app icon source. `Resources/AppIcon.png` is its flattened 1024 × 1024 marketing preview.

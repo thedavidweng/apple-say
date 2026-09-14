@@ -102,7 +102,7 @@ Apple Say 会根据语法结构自动识别文档模式：
 ### 环境要求
 
 - macOS 14.0 (Sonoma) 或更高版本
-- 安装了 Swift 6.0 或更高版本的 Xcode Command Line Tools
+- Xcode 26 或更高版本（包含 Swift 6 工具链与 Icon Composer 构建工具）
 
 ### 构建步骤
 

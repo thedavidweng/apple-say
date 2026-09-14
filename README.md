@@ -101,7 +101,7 @@ If syntax errors or conflicting timestamps are detected, the editor treats the c
 ### Prerequisites
 
 - macOS 14.0 (Sonoma) or later
-- Xcode Command Line Tools with Swift 6.0 or later
+- Xcode 26 or later, including the Swift 6 toolchain and Icon Composer build tools
 
 ### Build Instructions
 

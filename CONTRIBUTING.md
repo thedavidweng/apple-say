@@ -67,6 +67,7 @@ All unit, boundary, and behavioral test suites must pass cleanly.
 <br />
 
 Ensure that the standalone macOS `.app` bundle builds, packages, and signs properly.
+This step requires Xcode 26 or later because `actool` compiles the layered Icon Composer document into the app bundle.
 
 - **Command**:
   ```bash
