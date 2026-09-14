@@ -9,6 +9,18 @@
       "package-name": "apple-say",
       "changelog-path": "CHANGELOG.md",
       "include-component-in-tag": false,
+      "extra-files": [
+        {
+          "type": "xml",
+          "path": "Resources/Info.plist",
+          "xpath": "/plist/dict/key[.='CFBundleShortVersionString']/following-sibling::string[1]"
+        },
+        {
+          "type": "xml",
+          "path": "Resources/Info.plist",
+          "xpath": "/plist/dict/key[.='CFBundleVersion']/following-sibling::string[1]"
+        }
+      ],
       "changelog-sections": [
         { "type": "feat", "section": "✨ Features" },
         { "type": "fix", "section": "🐛 Bug Fixes" },
