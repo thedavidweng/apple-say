@@ -148,5 +148,5 @@ Apple Say 不会收集、存储、上传或共享任何个人数据。
 ## 📄 规范与参与贡献
 
 - 项目领域词汇与设计规范详见 [CONTEXT.md](CONTEXT.md)。
-- 代码贡献准则与提交前检查清单详见 [CONTRIBUTING_zh.md](CONTRIBUTING_zh.md)。
+- 代码贡献准则与提交前检查清单详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 - 欢迎通过 [GitHub Issues](https://github.com/thedavidweng/apple-say/issues) 提交问题反馈、功能建议或贡献代码。

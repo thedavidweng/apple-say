@@ -2,11 +2,6 @@
   <img src="Resources/AppIcon.png" alt="Apple Say Icon" width="96" height="96" />
   <h2>Contributing to Apple Say</h2>
   <p><strong>Guidelines for code contributions, commit conventions, and pre-commit verifications.</strong></p>
-
-  <p>
-    <a href="CONTRIBUTING.md"><strong>English</strong></a> •
-    <a href="CONTRIBUTING_zh.md"><strong>简体中文</strong></a>
-  </p>
 </div>
 
 ---
