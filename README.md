@@ -22,20 +22,20 @@
 
 ---
 
-**Apple Say** is a lightweight, elegant native macOS application for speech synthesis and timed-audio creation. Powered directly by macOS's built-in speech engine (`/usr/bin/say` and system speech synthesizers), it lets you write or edit Plain Text, LRC, and Enhanced LRC documents, preview speech in real time, and export production-quality audio.
+**Apple Say** is a native macOS application for speech synthesis and timed-audio creation. It uses macOS system speech synthesizers and `/usr/bin/say` to write, preview, and export Plain Text, LRC, and Enhanced LRC documents.
 
-Everything runs entirely on your Mac—no cloud services, no network calls, no subscriptions, and zero privacy compromises.
+Speech synthesis runs locally using macOS system components without external network requests or subscriptions.
 
 ---
 
 ## ✨ Features
 
-- 📄 **Native macOS Document Workflow**: Built as a standard macOS document app supporting tabs, autosave, versions, and full UTF-8 encoding.
-- ⏱️ **Smart Timed-Text Alignment**: Seamlessly handles Plain Text, LRC (line-level timing), and Enhanced LRC (word/fragment-level timing). Timestamps constrain absolute audio placement—Apple Say dynamically measures rendered speech and accelerates speech speed when necessary to meet the next timestamp without clipping.
-- 🗣️ **System & Personal Voices**: Discover and use all voices installed on macOS. Filter voices by language, use **System Voice** (with automatic support for macOS Siri Natural voices), or synthesize audio using your authorized Apple **Personal Voice**.
-- 🎛️ **Comprehensive Speech Inspector**: Adjust Speech Speed (WPM) and Pitch, select output container formats (AAC, AIFF, WAV, CAF), and configure advanced audio properties including channels, sample rates, bitrates, and converter quality.
-- 🎧 **Instant Preview & Audio Export**: Audition any segment immediately with keyboard shortcuts, or export high-resolution audio files directly through the native macOS save dialog.
-- 🔒 **100% Private & Offline**: All speech synthesis and audio processing stay strictly local. No telemetry, no background analytics, and no external dependencies.
+- 📄 **Editor Workflow**: Launches directly into an editor window. Enter text and preview or export audio without having to save a file first.
+- ⏱️ **Timed-Text Alignment**: Supports Plain Text, LRC (line-level timing), and Enhanced LRC (word/fragment-level timing). When timestamps are present, speech duration is measured and playback speed is adjusted to keep speech within each interval.
+- 🗣️ **System & Personal Voices**: Lists voices installed on macOS with language filtering. Supports macOS **System Voice** (including Siri voices configured under Spoken Content) and authorized **Personal Voice** profiles.
+- 🎛️ **Speech Inspector**: Configures speech rate (WPM), pitch, output container formats (AAC, AIFF, WAV, CAF), audio channels, sample rates, bitrates, and converter quality.
+- 🎧 **Playback & Audio Export**: Preview playback with keyboard shortcuts or export audio files through the macOS save panel.
+- 🔒 **Local & Offline**: Speech synthesis and audio processing run locally. No network requests, telemetry, or third-party runtime dependencies.
 
 ---
 
@@ -70,7 +70,7 @@ brew upgrade --cask apple-say
 
 Apple Say automatically identifies the document format based on its syntax:
 
-- **Plain Text**: Standard UTF-8 plain text for continuous, uninterrupted speech synthesis.
+- **Plain Text**: Standard UTF-8 plain text for continuous speech synthesis.
 - **LRC**: Line-level synchronized text with line timestamps:
   ```lrc
   [00:02.00] Hello, welcome to Apple Say.
@@ -81,7 +81,7 @@ Apple Say automatically identifies the document format based on its syntax:
   [00:01.00] <00:01.20> Precision <00:02.00> word-level <00:02.80> alignment.
   ```
 
-If syntax errors or conflicting timestamps are detected, the editor treats the content safely as Plain Text or notifies you with a clear **Timing Error** instead of distorting your text.
+If syntax errors or conflicting timestamps are detected, the editor treats the content safely as Plain Text or notifies you with a timing error.
 
 ---
 
