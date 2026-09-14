@@ -46,7 +46,8 @@ import Foundation
         try Task.checkCancellation()
         guard generation == attempt else { throw CancellationError() }
         guard processObject != kAudioObjectUnknown else {
-            throw SpeechError.captureUnavailable("macOS did not expose the say audio process before playback. Recording cannot begin without risking missing speech.")
+            let message = "macOS did not expose the say audio process before playback. Recording cannot begin without risking missing speech."
+            throw SpeechError.captureUnavailable(message)
         }
         let tap = ProcessAudioTap()
         do {
@@ -55,7 +56,8 @@ import Foundation
         } catch {
             guard tap.cancel() else {
                 session = tap
-                throw SpeechError.captureFailed("Core Audio setup failed and its process tap could not be fully released. Restart Apple Say before retrying Export.")
+                let message = "Core Audio setup failed and its process tap could not be fully released. Restart Apple Say before retrying Export."
+                throw SpeechError.captureFailed(message)
             }
             throw error
         }
@@ -75,11 +77,11 @@ import Foundation
 
 /// The callback owns its mutable recording state until Core Audio stops and its
 /// serial queue drains. Only then may the main thread close the file or read results.
-struct CoreAudioCleanupOperations {
-    var stopDevice: (AudioObjectID, AudioDeviceIOProcID) -> OSStatus
-    var destroyIO: (AudioObjectID, AudioDeviceIOProcID) -> OSStatus
-    var destroyDevice: (AudioObjectID) -> OSStatus
-    var destroyTap: (AudioObjectID) -> OSStatus
+struct CoreAudioCleanupOperations: Sendable {
+    var stopDevice: @Sendable (AudioObjectID, AudioDeviceIOProcID) -> OSStatus
+    var destroyIO: @Sendable (AudioObjectID, AudioDeviceIOProcID) -> OSStatus
+    var destroyDevice: @Sendable (AudioObjectID) -> OSStatus
+    var destroyTap: @Sendable (AudioObjectID) -> OSStatus
 
     static let system = CoreAudioCleanupOperations(
         stopDevice: AudioDeviceStop,
@@ -187,7 +189,10 @@ private final class ProcessAudioTap: @unchecked Sendable {
         try require(AudioDeviceCreateIOProcIDWithBlock(&resources.ioProc, resources.deviceID, queue) { [self] _, input, _, _, _ in
             record(input)
         }, "attach the PCM recorder")
-        try require(AudioDeviceStart(resources.deviceID, resources.ioProc), "start audio capture; allow Apple Say in System Settings → Privacy & Security → Screen & System Audio Recording")
+        try require(
+            AudioDeviceStart(resources.deviceID, resources.ioProc),
+            "start audio capture; allow Apple Say in System Settings → Privacy & Security → Screen & System Audio Recording"
+        )
         resources.isRunning = true
     }
 
@@ -219,7 +224,9 @@ private final class ProcessAudioTap: @unchecked Sendable {
         }
         guard framesWritten > 0, hasSignal else {
             removePartialFile()
-            throw SpeechError.captureUnavailable("The selected speech process produced no capturable audio. Check Apple Say’s system audio recording permission. macOS may isolate Personal Voice playback from this process.")
+            let message = "The selected speech process produced no capturable audio. Check Apple Say’s system audio recording permission. " +
+                "macOS may isolate Personal Voice playback from this process."
+            throw SpeechError.captureUnavailable(message)
         }
     }
 

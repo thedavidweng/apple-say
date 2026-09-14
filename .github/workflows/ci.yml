@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Lint, Test and Build
+    runs-on: macos-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run SwiftLint (Strict Mode)
+        run: swiftlint lint --strict
+
+      - name: Run test suite (Zero Warnings)
+        run: swift test -Xswiftc -warnings-as-errors
+
+      - name: Build application bundle
+        run: ./scripts/build-app.sh

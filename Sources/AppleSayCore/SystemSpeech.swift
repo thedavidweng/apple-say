@@ -135,8 +135,7 @@ struct SystemVoiceMetadata: Sendable {
                 throw SpeechError.emptyAudio
             }
             let file: AVAudioFile
-            do { file = try AVAudioFile(forReading: destination) }
-            catch {
+            do { file = try AVAudioFile(forReading: destination) } catch {
                 if request.settings.voice?.isPersonal == true {
                     throw SpeechError.nativeOutputUnavailable("The system completed without producing a readable Personal Voice audio file.")
                 }

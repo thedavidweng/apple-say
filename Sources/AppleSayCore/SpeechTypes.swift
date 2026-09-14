@@ -115,10 +115,19 @@ public enum AudioContainer: String, CaseIterable, Identifiable, Sendable {
     public var id: String { rawValue }
     public var title: String { self == .wav ? "WAVE" : rawValue.uppercased() }
     public var sayFormat: String {
-        switch self { case .aiff: "AIFF"; case .caf: "caff"; case .wav: "WAVE"; case .m4a: "m4af" }
+        switch self {
+        case .aiff: "AIFF"
+        case .caf: "caff"
+        case .wav: "WAVE"
+        case .m4a: "m4af"
+        }
     }
     public var defaultDataFormat: String {
-        switch self { case .aiff: "BEI16"; case .caf, .wav: "LEI16"; case .m4a: "aac" }
+        switch self {
+        case .aiff: "BEI16"
+        case .caf, .wav: "LEI16"
+        case .m4a: "aac"
+        }
     }
 }
 

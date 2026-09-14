@@ -3,6 +3,11 @@ import CoreAudio
 import XCTest
 @testable import AppleSayCore
 
+private final class CounterBox: @unchecked Sendable {
+    var value: Int
+    init(_ value: Int = 0) { self.value = value }
+}
+
 final class SayBoundaryTests: XCTestCase {
     func testCatalogPreservesNamesWithSpacesAndLocaleMetadata() {
         let listing = """
@@ -86,8 +91,10 @@ final class SayBoundaryTests: XCTestCase {
                                     destination: URL(fileURLWithPath: "/tmp/a file;name.wav"),
                                     output: ExportSettings(container: .wav))
         let arguments = try SayArguments.make(for: request, input: URL(fileURLWithPath: "/tmp/input file"))
-        XCTAssertFalse(arguments.contains(text))
-        XCTAssertEqual(arguments, ["-r", "212", "-f", "/tmp/input file", "-v", "A Voice", "-o", "/tmp/a file;name.wav", "--file-format=WAVE", "--data-format=LEI16"])
+        XCTAssertEqual(arguments, [
+            "-r", "212", "-f", "/tmp/input file", "-v", "A Voice",
+            "-o", "/tmp/a file;name.wav", "--file-format=WAVE", "--data-format=LEI16"
+        ])
         XCTAssertEqual(try SayArguments.inputText(for: request), text)
     }
 
@@ -145,16 +152,16 @@ final class SayBoundaryTests: XCTestCase {
     }
 
     func testCaptureCleanupFailureRemainsObservableAndRetryable() {
-        var deviceDestroyAttempts = 0
-        var tapDestroyAttempts = 0
+        let deviceDestroyAttempts = CounterBox()
+        let tapDestroyAttempts = CounterBox()
         let operations = CoreAudioCleanupOperations(
             stopDevice: { _, _ in noErr },
             destroyIO: { _, _ in noErr },
             destroyDevice: { _ in
-                deviceDestroyAttempts += 1
-                return deviceDestroyAttempts == 1 ? -1 : noErr
+                deviceDestroyAttempts.value += 1
+                return deviceDestroyAttempts.value == 1 ? -1 : noErr
             },
-            destroyTap: { _ in tapDestroyAttempts += 1; return noErr }
+            destroyTap: { _ in tapDestroyAttempts.value += 1; return noErr }
         )
         let lifecycle = CaptureResourceLifecycle(operations: operations)
         lifecycle.deviceID = 10
@@ -163,24 +170,24 @@ final class SayBoundaryTests: XCTestCase {
         XCTAssertEqual(lifecycle.destroyObjects(), -1)
         XCTAssertEqual(lifecycle.deviceID, 10, "A failed destroy must retain the ID for cleanup retry")
         XCTAssertEqual(lifecycle.tapID, 20, "The tap remains owned by the aggregate device until that device is destroyed")
-        XCTAssertEqual(tapDestroyAttempts, 0)
+        XCTAssertEqual(tapDestroyAttempts.value, 0)
         XCTAssertEqual(lifecycle.destroyObjects(), noErr)
         XCTAssertEqual(lifecycle.deviceID, AudioObjectID(kAudioObjectUnknown))
         XCTAssertEqual(lifecycle.tapID, AudioObjectID(kAudioObjectUnknown))
-        XCTAssertEqual(tapDestroyAttempts, 1)
+        XCTAssertEqual(tapDestroyAttempts.value, 1)
     }
 
     func testCaptureCleanupRetainsTheDeviceUntilIOProcDestructionCanBeRetried() {
-        var destroyIOAttempts = 0
-        var destroyedObjects = 0
+        let destroyIOAttempts = CounterBox()
+        let destroyedObjects = CounterBox()
         let operations = CoreAudioCleanupOperations(
             stopDevice: { _, _ in noErr },
             destroyIO: { _, _ in
-                destroyIOAttempts += 1
-                return destroyIOAttempts == 1 ? -1 : noErr
+                destroyIOAttempts.value += 1
+                return destroyIOAttempts.value == 1 ? -1 : noErr
             },
-            destroyDevice: { _ in destroyedObjects += 1; return noErr },
-            destroyTap: { _ in destroyedObjects += 1; return noErr }
+            destroyDevice: { _ in destroyedObjects.value += 1; return noErr },
+            destroyTap: { _ in destroyedObjects.value += 1; return noErr }
         )
         let lifecycle = CaptureResourceLifecycle(operations: operations)
         lifecycle.deviceID = 10
@@ -191,13 +198,13 @@ final class SayBoundaryTests: XCTestCase {
         XCTAssertEqual(lifecycle.stopIO(), -1)
         XCTAssertNotNil(lifecycle.ioProc)
         XCTAssertEqual(lifecycle.destroyObjects(), kAudioHardwareIllegalOperationError)
-        XCTAssertEqual(destroyedObjects, 0)
+        XCTAssertEqual(destroyedObjects.value, 0)
         XCTAssertEqual(lifecycle.deviceID, 10)
         XCTAssertEqual(lifecycle.tapID, 20)
 
         XCTAssertEqual(lifecycle.stopIO(), noErr)
         XCTAssertNil(lifecycle.ioProc)
         XCTAssertEqual(lifecycle.destroyObjects(), noErr)
-        XCTAssertEqual(destroyedObjects, 2)
+        XCTAssertEqual(destroyedObjects.value, 2)
     }
 }

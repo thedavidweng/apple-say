@@ -14,5 +14,5 @@ let package = Package(
         .executableTarget(name: "AppleSay", dependencies: ["AppleSayCore"]),
         .testTarget(name: "AppleSayCoreTests", dependencies: ["AppleSayCore"])
     ],
-    swiftLanguageModes: [.v5]
+    swiftLanguageModes: [.v6]
 )

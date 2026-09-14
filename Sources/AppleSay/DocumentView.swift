@@ -195,16 +195,18 @@ struct DocumentView: View {
             do {
                 try await speech.authorizePersonalVoice()
                 showPersonalVoiceSettingsGuidance = speech.authorization == .denied
-            }
-            catch { errorMessage = error.localizedDescription }
+            } catch { errorMessage = error.localizedDescription }
         }
     }
 
     private func preview() {
         Task {
-            do { try await speech.preview(text: document.text, settings: settings) }
-            catch is CancellationError { }
-            catch { errorMessage = error.localizedDescription }
+            do {
+                try await speech.preview(text: document.text, settings: settings)
+            } catch is CancellationError {
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -221,9 +223,12 @@ struct DocumentView: View {
         panel.beginSheetModal(for: window) { response in
             guard response == .OK, let url = panel.url else { return }
             Task { @MainActor in
-                do { try await speech.export(text: document.text, settings: settings, output: output, to: url) }
-                catch is CancellationError { }
-                catch { errorMessage = error.localizedDescription }
+                do {
+                    try await speech.export(text: document.text, settings: settings, output: output, to: url)
+                } catch is CancellationError {
+                } catch {
+                    errorMessage = error.localizedDescription
+                }
             }
         }
     }

@@ -24,11 +24,14 @@ public struct ParsedDocument: Equatable, Sendable {
 
 enum TimedDocumentParser {
     private static let plain = ParsedDocument(format: .plainText, segments: [])
+    private static func regex(_ pattern: String) -> NSRegularExpression {
+        (try? NSRegularExpression(pattern: pattern)) ?? NSRegularExpression()
+    }
     private static let stamp = #"([0-9]+):([0-5][0-9])(?:\.([0-9]{1,3}))?"#
-    private static let lineTag = try! NSRegularExpression(pattern: #"^\["# + stamp + #"\]"#)
-    private static let inlineTag = try! NSRegularExpression(pattern: #"<"# + stamp + #">"#)
-    private static let metadata = try! NSRegularExpression(pattern: #"^\[(ar|al|ti|au|by|re|ve|length):[^\[\]\r\n]*\]$"#)
-    private static let offsetTag = try! NSRegularExpression(pattern: #"^\[offset:([+-]?[0-9]+)\]$"#)
+    private static let lineTag = regex(#"^\["# + stamp + #"\]"#)
+    private static let inlineTag = regex(#"<"# + stamp + #">"#)
+    private static let metadata = regex(#"^\[(ar|al|ti|au|by|re|ve|length):[^\[\]\r\n]*\]$"#)
+    private static let offsetTag = regex(#"^\[offset:([+-]?[0-9]+)\]$"#)
 
     static func parse(_ text: String) -> ParsedDocument {
         var segments: [Segment] = []

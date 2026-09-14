@@ -5,7 +5,9 @@ enum SayCatalog {
     static func voices(from listing: String) -> [Voice] {
         // Voice names may contain spaces and parentheses; locale is the column
         // immediately before the sample-text marker, not a fixed character offset.
-        let expression = try! NSRegularExpression(pattern: #"^(.+?)\s+([A-Za-z]{2,3}[_-][A-Za-z0-9_-]+)\s*#"#)
+        guard let expression = try? NSRegularExpression(pattern: #"^(.+?)\s+([A-Za-z]{2,3}[_-][A-Za-z0-9_-]+)\s*#"#) else {
+            return []
+        }
         return listing.split(whereSeparator: \.isNewline).compactMap { line in
             let value = String(line)
             guard let match = expression.firstMatch(in: value, range: NSRange(value.startIndex..., in: value)),
@@ -43,7 +45,7 @@ enum SayCatalog {
         try "[[slnc 1]]".write(to: input, atomically: true, encoding: .utf8)
         let outputs = try await withThrowingTaskGroup(of: OutputCapability?.self) { group in
             for container in AudioContainer.allCases where supported.contains(container.sayFormat) {
-                group.addTask { @MainActor in
+                group.addTask {
                     try await discoverOutput(container, directory: directory, input: input, runner: runner)
                 }
             }
@@ -74,7 +76,7 @@ enum SayCatalog {
         for format in listedFormats where !formats.contains(format) { formats.append(format) }
         let profiles = try await withThrowingTaskGroup(of: AudioDataCapability?.self) { group in
             for format in formats {
-                group.addTask { @MainActor in
+                group.addTask {
                     try await discoverProfile(format, container: container, directory: directory,
                                               input: input, runner: runner)
                 }

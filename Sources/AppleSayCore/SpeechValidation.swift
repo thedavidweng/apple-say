@@ -47,7 +47,8 @@ public struct TimingError: LocalizedError, Equatable {
     public var errorDescription: String? {
         let location = fragment.map { "line \(line), Timed Fragment \($0)" } ?? "line \(line)"
         if let deadline {
-            return "Timing Error on \(location): speech starting at \(start.formatted()) s cannot fit before \(deadline.formatted()) s. Adjust the text or Timestamps."
+            return "Timing Error on \(location): speech starting at \(start.formatted()) s " +
+                "cannot fit before \(deadline.formatted()) s. Adjust the text or Timestamps."
         }
         return "Timing Error on \(location): the Timestamp must be at or after zero."
     }

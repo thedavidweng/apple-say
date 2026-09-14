@@ -160,10 +160,11 @@ enum AudioFiles {
         try check(AppleSayCommitExtAudioFileConverter(file, converter))
     }
 
+    private static let pcmFormatRegex = try? NSRegularExpression(pattern: #"^(BE|LE)?([IF])(8|16|24|32|64)$"#)
+
     private static func outputFormat(_ settings: ExportSettings, channels: UInt32) throws -> AudioStreamBasicDescription {
         let token = settings.dataFormat ?? (settings.container == .m4a ? "aac" : settings.container == .aiff ? "BEI16" : "LEI16")
-        let regex = try! NSRegularExpression(pattern: #"^(BE|LE)?([IF])(8|16|24|32|64)$"#)
-        let match = regex.firstMatch(in: token, range: NSRange(token.startIndex..., in: token))
+        let match = pcmFormatRegex?.firstMatch(in: token, range: NSRange(token.startIndex..., in: token))
         if let match {
             let value = token as NSString
             let bits = UInt32(value.substring(with: match.range(at: 3)))!

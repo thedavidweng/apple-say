@@ -4,7 +4,12 @@ import Observation
 public enum SpeechJobState: Equatable {
     case idle, preparing, previewing, exporting, stopping, completed, cancelled, failed(String)
     public var isActive: Bool {
-        switch self { case .preparing, .previewing, .exporting, .stopping: true; default: false }
+        switch self {
+        case .preparing, .previewing, .exporting, .stopping:
+            return true
+        default:
+            return false
+        }
     }
 }
 
@@ -223,6 +228,13 @@ public struct AudioPlacement: Equatable, Sendable {
         var captured = false
     }
 
+    private struct TimelineUnit {
+        let start: Double
+        let text: String
+        let end: Double?
+        let fragment: Int?
+    }
+
     private func renderTimeline(_ document: ParsedDocument, settings: SpeechSettings, scratch: URL) async throws -> RenderedTimeline {
         var result = RenderedTimeline()
         for (index, segment) in document.segments.enumerated() {
@@ -230,11 +242,11 @@ public struct AudioPlacement: Equatable, Sendable {
             guard segment.start >= 0, segment.start < Double(Int64.max) / AudioFiles.sampleRate else {
                 throw TimingError(line: segment.line, fragment: nil, start: segment.start, deadline: nil)
             }
-            let units: [(start: Double, text: String, end: Double?, fragment: Int?)] = segment.fragments.isEmpty
-                ? [(segment.start, segment.text, nextSegment, nil)]
-                : segment.fragments.enumerated().map { i, fragment in
+            let units: [TimelineUnit] = segment.fragments.isEmpty
+                ? [TimelineUnit(start: segment.start, text: segment.text, end: nextSegment, fragment: nil)]
+                : segment.fragments.enumerated().map { fragmentIndex, fragment in
                     let end = [fragment.end, nextSegment].compactMap { $0 }.min()
-                    return (fragment.start, fragment.text, end, i + 1)
+                    return TimelineUnit(start: fragment.start, text: fragment.text, end: end, fragment: fragmentIndex + 1)
                 }
             for unit in units where !unit.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 guard unit.start >= segment.start else {
@@ -262,13 +274,17 @@ public struct AudioPlacement: Equatable, Sendable {
                     result.captured = result.captured || usedCapture
                     try await Task.detached { try AudioFiles.normalize(source, to: normalized) }.cancellableValue()
                     let duration = try AudioFiles.duration(of: normalized)
-                    if let end = unit.end, (unit.start * AudioFiles.sampleRate).rounded() + (duration * AudioFiles.sampleRate).rounded() > (end * AudioFiles.sampleRate).rounded() {
-                        guard fitted.speed < capabilities.speedRange.upperBound else {
-                            throw TimingError(line: segment.line, fragment: unit.fragment, start: unit.start, deadline: end)
+                    if let end = unit.end {
+                        let totalSamples = (unit.start * AudioFiles.sampleRate).rounded() + (duration * AudioFiles.sampleRate).rounded()
+                        let deadlineSamples = (end * AudioFiles.sampleRate).rounded()
+                        if totalSamples > deadlineSamples {
+                            guard fitted.speed < capabilities.speedRange.upperBound else {
+                                throw TimingError(line: segment.line, fragment: unit.fragment, start: unit.start, deadline: end)
+                            }
+                            let proposed = ceil(Double(fitted.speed) * duration / (end - unit.start) * 1.02)
+                            fitted.speed = Int(min(Double(capabilities.speedRange.upperBound), max(Double(fitted.speed + 1), proposed)))
+                            continue
                         }
-                        let proposed = ceil(Double(fitted.speed) * duration / (end - unit.start) * 1.02)
-                        fitted.speed = Int(min(Double(capabilities.speedRange.upperBound), max(Double(fitted.speed + 1), proposed)))
-                        continue
                     }
                     result.clips.append((normalized, unit.start))
                     result.placements.append(AudioPlacement(start: unit.start, duration: duration, speed: fitted.speed,
