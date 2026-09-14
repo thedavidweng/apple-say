@@ -36,30 +36,33 @@ struct SpeechInspector: View {
                     "Choose a Voice, or choose “Add Voices…” from the menu to install higher quality voices.",
                     "选择声音，或从菜单中选择“添加声音…”安装更高品质的声音。"
                 ))
-                LabeledContent {
+                HStack(spacing: 8) {
+                    Text(strings.text("Voice Quality", "声音品质"))
+                    Spacer()
+                    let display = currentVoiceQualityDisplay
                     HStack(spacing: 6) {
-                        let display = currentVoiceQualityDisplay
                         Circle()
                             .fill(display.color)
                             .frame(width: 7, height: 7)
                         Text(display.title)
-                            .foregroundStyle(display.color)
+                            .foregroundStyle(.primary)
                             .fontWeight(.medium)
-                        Button {
-                            showVoiceQualityInfo.toggle()
-                        } label: {
-                            Image(systemName: "info.circle")
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .help(strings.text("Voice Quality Guide", "声音品质说明"))
-                        .popover(isPresented: $showVoiceQualityInfo, arrowEdge: .trailing) {
-                            VoiceQualityHelpView(strings: strings)
-                        }
                     }
-                } label: {
-                    Text(strings.text("Voice Quality", "声音品质"))
+                    .accessibilityElement(children: .combine)
+                    Button {
+                        showVoiceQualityInfo.toggle()
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(strings.text("Voice Quality Guide", "声音品质说明"))
+                    .help(strings.text("Voice Quality Guide", "声音品质说明"))
+                    .popover(isPresented: $showVoiceQualityInfo, arrowEdge: .trailing) {
+                        VoiceQualityHelpView(strings: strings)
+                    }
                 }
+                .accessibilityElement(children: .contain)
                 if let voice = settings.voice {
                     if voice.quality < .enhanced && !voice.isPersonal {
                         Text(strings.text(
@@ -303,13 +306,13 @@ struct SpeechInspector: View {
 }
 
 enum VoiceQualityTheme {
-    static let siri = Color.purple
-    static let premium = Color.orange
-    static let enhanced = Color.green
-    static let compact = Color.blue
+    static let siri = Color.accentColor
+    static let premium = Color.accentColor
+    static let enhanced = Color.accentColor
+    static let compact = Color.secondary
     static let legacy = Color.secondary
-    static let novelty = Color.pink
-    static let personal = Color.indigo
+    static let novelty = Color.orange
+    static let personal = Color.accentColor
 
     static func color(for quality: VoiceQuality, isPersonal: Bool = false, isNovelty: Bool = false) -> Color {
         if isPersonal { return personal }
@@ -415,7 +418,7 @@ struct VoiceQualityHelpView: View {
             }
         }
         .padding(16)
-        .frame(width: 350)
+        .frame(width: 380, alignment: .leading)
     }
 
     private func qualityRow(name: String, badge: String, badgeColor: Color, description: String) -> some View {
@@ -428,18 +431,20 @@ struct VoiceQualityHelpView: View {
                     .font(.subheadline.bold())
                 Spacer()
                 Text(badge)
-                    .font(.caption2.bold())
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 2)
-                    .background(badgeColor.opacity(0.18))
-                    .foregroundStyle(badgeColor)
-                    .clipShape(Capsule())
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(.quaternary, in: Capsule())
             }
             Text(description)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 16)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
