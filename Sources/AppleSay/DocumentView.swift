@@ -4,6 +4,71 @@ import SwiftUI
 import UniformTypeIdentifiers
 import AppleSayCore
 
+/// SwiftUI's content margins inset the scroll view background on macOS. Using
+/// NSTextView's native text-container inset keeps the document canvas edge-to-edge
+/// while giving the insertion point and text a comfortable internal margin.
+private struct DocumentTextEditor: NSViewRepresentable {
+    @Binding var text: String
+    let accessibilityLabel: String
+    let accessibilityHelp: String
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSTextView.scrollableTextView()
+        let textView = scrollView.documentView as! NSTextView
+
+        scrollView.borderType = .noBorder
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = .textBackgroundColor
+
+        textView.isRichText = false
+        textView.allowsUndo = true
+        textView.font = .systemFont(ofSize: 16)
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
+        textView.textContainer?.widthTracksTextView = true
+        configureTextContainer(textView)
+        textView.drawsBackground = true
+        textView.backgroundColor = .textBackgroundColor
+        textView.string = text
+        textView.delegate = context.coordinator
+        textView.setAccessibilityLabel(accessibilityLabel)
+        textView.setAccessibilityHelp(accessibilityHelp)
+
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        context.coordinator.parent = self
+        let textView = scrollView.documentView as! NSTextView
+        configureTextContainer(textView)
+        if textView.string != text {
+            textView.string = text
+        }
+        textView.setAccessibilityLabel(accessibilityLabel)
+        textView.setAccessibilityHelp(accessibilityHelp)
+    }
+
+    private func configureTextContainer(_ textView: NSTextView) {
+        textView.textContainerInset = NSSize(width: 20, height: 16)
+        textView.textContainer?.lineFragmentPadding = 0
+    }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        var parent: DocumentTextEditor
+
+        init(_ parent: DocumentTextEditor) {
+            self.parent = parent
+        }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            parent.text = textView.string
+        }
+    }
+}
+
 struct DocumentView: View {
     @State private var text = ""
     @State private var fileURL: URL?
@@ -42,7 +107,7 @@ struct DocumentView: View {
     var body: some View {
         documentCanvas
         .frame(minWidth: 480, minHeight: 360)
-        .navigationTitle(fileURL?.lastPathComponent ?? (text.isEmpty ? "Apple Say" : strings.text("Untitled", "未命名")))
+        .navigationTitle(fileURL?.lastPathComponent ?? strings.text("Untitled", "未命名"))
         .inspector(isPresented: $inspectorPresented) {
             SpeechInspector(
                 speech: speech, settings: $settings, output: $output, language: $language,
@@ -105,66 +170,53 @@ struct DocumentView: View {
         }
     }
 
-    @ViewBuilder private var documentCanvas: some View {
-        if #available(macOS 26.0, *) {
+    private var documentCanvas: some View {
+        VStack(spacing: 0) {
             documentEditor
-                .safeAreaBar(edge: .bottom, spacing: 0) {
-                    liquidStatusBar
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                }
-        } else {
-            VStack(spacing: 0) {
-                documentEditor
-                Divider()
-                statusBar
-            }
+            Divider()
+            statusBar
         }
     }
 
     private var documentEditor: some View {
         ZStack(alignment: .topLeading) {
-            TextEditor(text: $text)
-                .font(.system(size: 16))
-                .padding(18)
-                .accessibilityLabel(strings.text("Document text", "文稿文本"))
-                .accessibilityHint(strings.text(
+            DocumentTextEditor(
+                text: $text,
+                accessibilityLabel: strings.text("Document text", "文稿文本"),
+                accessibilityHelp: strings.text(
                     "Enter Plain Text, LRC, or Enhanced LRC to speak.",
                     "输入纯文本、LRC 或增强型 LRC 后即可播放。"
-                ))
+                )
+            )
             if text.isEmpty {
                 Text(strings.text("Enter text to speak…", "输入要朗读的文本…"))
                     .font(.system(size: 16))
                     .foregroundStyle(Color(nsColor: .placeholderTextColor))
-                    .padding(.top, 18)
-                    .padding(.leading, 23)
+                    .padding(.top, 16)
+                    .padding(.leading, 25)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
         }
+        .background(Color(nsColor: .textBackgroundColor))
     }
 
     @ToolbarContentBuilder private var speechToolbar: some ToolbarContent {
         if #available(macOS 26.0, *) {
             ToolbarItemGroup {
-                liquidPlayButton
+                playButton
                 stopButton
-            }
-            ToolbarSpacer(.fixed)
-            ToolbarItem(placement: .automatic) {
                 exportButton
             }
-            ToolbarSpacer(.flexible)
+            ToolbarSpacer(.fixed)
             ToolbarItem(placement: .automatic) {
                 inspectorButton
             }
         } else {
             ToolbarItemGroup {
-                legacyPlayButton
+                playButton
                 stopButton
                 exportButton
-            }
-            ToolbarItem(placement: .automatic) {
                 inspectorButton
             }
         }
@@ -187,19 +239,6 @@ struct DocumentView: View {
         }
         .disabled(!canPreview)
         .help(playButtonHelp)
-    }
-
-    @available(macOS 26.0, *)
-    private var liquidPlayButton: some View {
-        playButton.buttonStyle(.glassProminent)
-    }
-
-    @ViewBuilder private var legacyPlayButton: some View {
-        if isWelcomePromptActive {
-            playButton.buttonStyle(.borderedProminent)
-        } else {
-            playButton
-        }
     }
 
     private var stopButton: some View {
@@ -238,33 +277,6 @@ struct DocumentView: View {
         .foregroundStyle(.secondary)
         .padding(.horizontal, 16)
         .padding(.vertical, 9)
-        .accessibilityElement(children: .combine)
-    }
-
-    @available(macOS 26.0, *)
-    private var liquidStatusBar: some View {
-        HStack(spacing: 10) {
-            Text(formatLabel)
-                .help(strings.text(
-                    "Document format is detected automatically from its complete contents.",
-                    "Apple Say 会根据文稿的完整内容自动识别格式。"
-                ))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .glassEffect(.regular, in: .capsule)
-            Spacer(minLength: 12)
-            HStack(spacing: 7) {
-                if busy || (refreshing && speech.voices.isEmpty) { ProgressView().controlSize(.small) }
-                Text(refreshing && speech.voices.isEmpty ? strings.text("Loading Voices…", "正在载入声音…") : statusLabel)
-                    .lineLimit(1)
-                    .help(statusLabel)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .glassEffect(.regular, in: .capsule)
-        }
-        .font(.callout)
-        .foregroundStyle(.secondary)
         .accessibilityElement(children: .combine)
     }
 
