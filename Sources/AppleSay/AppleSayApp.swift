@@ -52,12 +52,27 @@ struct AppleSayApp: App {
         }
         .defaultSize(width: 960, height: 660)
         .commands {
+            ApplicationCommands()
             FileCommands()
             SpeechCommands()
         }
 
         Settings {
             LanguageSettingsView()
+        }
+    }
+}
+
+struct ApplicationCommands: Commands {
+    @AppStorage(AppLanguagePreference.defaultsKey) private var languagePreference = AppLanguagePreference.system.rawValue
+
+    private var strings: AppStrings { AppStrings(preferenceRawValue: languagePreference) }
+
+    var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button(strings.text("About Apple Say", "关于 Apple Say")) {
+                AboutPanelController.shared.present()
+            }
         }
     }
 }

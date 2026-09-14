@@ -20,7 +20,6 @@ xcrun actool \
     "$project_root/Resources/AppIcon.icon"
 /usr/libexec/PlistBuddy -c "Merge '$application/Contents/icon-info.plist'" "$application/Contents/Info.plist"
 rm "$application/Contents/icon-info.plist"
-cp "$project_root/Resources/Credits.html" "$application/Contents/Resources/Credits.html"
 for localization in "$project_root"/Resources/*.lproj; do
     ditto "$localization" "$application/Contents/Resources/$(basename "$localization")"
 done
