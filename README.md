@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="Resources/AppIcon.png" alt="Apple Say Icon" width="128" height="128" />
+  <img src="Resources/AppIcon.webp" alt="Apple Say Icon" width="128" height="128" />
   <h1>Apple Say</h1>
   <p><strong>A native macOS studio for speech synthesis, LRC, and Enhanced LRC timed text.</strong></p>
 
@@ -17,7 +17,7 @@
   </p>
 
   <br />
-  <img src="public/screenshot.png" alt="Apple Say Main Window" width="800" />
+  <img src="public/screenshot.webp" alt="Apple Say Main Window" width="800" />
 </div>
 
 ---

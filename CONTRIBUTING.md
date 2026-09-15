@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="Resources/AppIcon.png" alt="Apple Say Icon" width="96" height="96" />
+  <img src="Resources/AppIcon.webp" alt="Apple Say Icon" width="96" height="96" />
   <h2>Contributing to Apple Say</h2>
   <p><strong>Guidelines for code contributions, commit conventions, and pre-commit verifications.</strong></p>
 </div>

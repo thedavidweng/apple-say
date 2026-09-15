@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="Resources/AppIcon.png" alt="Apple Say 图标" width="128" height="128" />
+  <img src="Resources/AppIcon.webp" alt="Apple Say 图标" width="128" height="128" />
   <h1>Apple Say</h1>
   <p><strong>基于 macOS 原生语音引擎的文本朗读、LRC 与增强型 LRC 时间轴音频工作台</strong></p>
 
@@ -17,7 +17,7 @@
   </p>
 
   <br />
-  <img src="public/screenshot.png" alt="Apple Say 主窗口界面" width="800" />
+  <img src="public/screenshot.webp" alt="Apple Say 主窗口界面" width="800" />
 </div>
 
 ---
