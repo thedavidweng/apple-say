@@ -2,12 +2,7 @@ import AVFAudio
 import CoreAudio
 import Foundation
 
-@MainActor protocol AudioPlayback: AnyObject {
-    func play(_ url: URL, device: String?) async throws
-    func stop()
-}
-
-@MainActor final class TimelinePlayback: AudioPlayback {
+@MainActor final class TimelinePlayback {
     private var player: AVAudioPlayer?
 
     func play(_ url: URL, device: String?) async throws {

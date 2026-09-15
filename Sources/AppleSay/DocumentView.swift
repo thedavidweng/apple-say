@@ -98,9 +98,6 @@ struct DocumentView: View {
     }
 
     private var strings: AppStrings { AppStrings(preferenceRawValue: languagePreference) }
-    private var appLanguagePreference: AppLanguagePreference {
-        AppLanguagePreference(rawValue: languagePreference) ?? .system
-    }
     private var busy: Bool { speech.state.isActive }
 
     private var hasText: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }

@@ -9,8 +9,7 @@ let package = Package(
         .executable(name: "AppleSay", targets: ["AppleSay"])
     ],
     targets: [
-        .target(name: "AppleSayAudioBridge", publicHeadersPath: "include"),
-        .target(name: "AppleSayCore", dependencies: ["AppleSayAudioBridge"]),
+        .target(name: "AppleSayCore"),
         .executableTarget(name: "AppleSay", dependencies: ["AppleSayCore"]),
         .testTarget(name: "AppleSayCoreTests", dependencies: ["AppleSayCore"])
     ],

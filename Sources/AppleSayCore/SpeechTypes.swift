@@ -72,8 +72,8 @@ public enum VoiceLanguage {
     /// by `say`, preferring the exact region before a same-language variant.
     public static func systemDefault(among voices: [Voice],
                                      preferredLanguages: [String] = Locale.preferredLanguages) -> String? {
-        var available: [String] = []
-        for voice in voices where !available.contains(voice.language) { available.append(voice.language) }
+        var seen = Set<String>()
+        let available = voices.map(\.language).filter { seen.insert($0).inserted }
         for preference in preferredLanguages {
             if let exact = available.first(where: { normalized($0) == normalized(preference) }) {
                 return exact
@@ -173,9 +173,6 @@ public struct OutputCapability: Equatable, Sendable {
     public var profiles: [AudioDataCapability]
     public init(container: AudioContainer, profiles: [AudioDataCapability]) {
         self.container = container; self.profiles = profiles
-    }
-    public var defaultProfile: AudioDataCapability? {
-        profiles.first { $0.dataFormat == container.defaultDataFormat }
     }
 }
 

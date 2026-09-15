@@ -26,14 +26,6 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
             return .english
         }
     }
-
-    var preferredVoiceLanguages: [String] {
-        switch self {
-        case .system: return Locale.preferredLanguages
-        case .english: return ["en-US"]
-        case .simplifiedChinese: return ["zh-Hans-CN", "zh-CN"]
-        }
-    }
 }
 
 enum AppLanguage {

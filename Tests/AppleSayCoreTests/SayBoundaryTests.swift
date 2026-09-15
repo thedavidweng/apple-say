@@ -3,11 +3,6 @@ import CoreAudio
 import XCTest
 @testable import AppleSayCore
 
-private final class CounterBox: @unchecked Sendable {
-    var value: Int
-    init(_ value: Int = 0) { self.value = value }
-}
-
 final class SayBoundaryTests: XCTestCase {
     func testCatalogPreservesNamesWithSpacesAndLocaleMetadata() {
         let listing = """
@@ -194,69 +189,12 @@ final class SayBoundaryTests: XCTestCase {
 
     func testAnyPersonalVoiceNativeOutputRejectionProducesTheTypedCompatibilityResult() {
         let result = SayProcessResult(status: 1, standardOutput: "", standardError: "本机不支持直接输出")
-        guard case .nativeOutputUnavailable(let message) = PersonalVoiceNativeOutput.unavailable(from: result) else {
+        guard case .nativeOutputUnavailable(let message) = SystemSpeech.personalVoiceNativeError(from: result) else {
             return XCTFail("Expected typed native-output unavailability")
         }
         XCTAssertEqual(message, "本机不支持直接输出")
-        XCTAssertNil(PersonalVoiceNativeOutput.unavailable(
+        XCTAssertNil(SystemSpeech.personalVoiceNativeError(
             from: SayProcessResult(status: 0, standardOutput: "", standardError: "warning")))
-    }
-
-    func testCaptureCleanupFailureRemainsObservableAndRetryable() {
-        let deviceDestroyAttempts = CounterBox()
-        let tapDestroyAttempts = CounterBox()
-        let operations = CoreAudioCleanupOperations(
-            stopDevice: { _, _ in noErr },
-            destroyIO: { _, _ in noErr },
-            destroyDevice: { _ in
-                deviceDestroyAttempts.value += 1
-                return deviceDestroyAttempts.value == 1 ? -1 : noErr
-            },
-            destroyTap: { _ in tapDestroyAttempts.value += 1; return noErr }
-        )
-        let lifecycle = CaptureResourceLifecycle(operations: operations)
-        lifecycle.deviceID = 10
-        lifecycle.tapID = 20
-
-        XCTAssertEqual(lifecycle.destroyObjects(), -1)
-        XCTAssertEqual(lifecycle.deviceID, 10, "A failed destroy must retain the ID for cleanup retry")
-        XCTAssertEqual(lifecycle.tapID, 20, "The tap remains owned by the aggregate device until that device is destroyed")
-        XCTAssertEqual(tapDestroyAttempts.value, 0)
-        XCTAssertEqual(lifecycle.destroyObjects(), noErr)
-        XCTAssertEqual(lifecycle.deviceID, AudioObjectID(kAudioObjectUnknown))
-        XCTAssertEqual(lifecycle.tapID, AudioObjectID(kAudioObjectUnknown))
-        XCTAssertEqual(tapDestroyAttempts.value, 1)
-    }
-
-    func testCaptureCleanupRetainsTheDeviceUntilIOProcDestructionCanBeRetried() {
-        let destroyIOAttempts = CounterBox()
-        let destroyedObjects = CounterBox()
-        let operations = CoreAudioCleanupOperations(
-            stopDevice: { _, _ in noErr },
-            destroyIO: { _, _ in
-                destroyIOAttempts.value += 1
-                return destroyIOAttempts.value == 1 ? -1 : noErr
-            },
-            destroyDevice: { _ in destroyedObjects.value += 1; return noErr },
-            destroyTap: { _ in destroyedObjects.value += 1; return noErr }
-        )
-        let lifecycle = CaptureResourceLifecycle(operations: operations)
-        lifecycle.deviceID = 10
-        lifecycle.tapID = 20
-        lifecycle.ioProc = { _, _, _, _, _, _, _ in noErr }
-        lifecycle.isRunning = true
-
-        XCTAssertEqual(lifecycle.stopIO(), -1)
-        XCTAssertNotNil(lifecycle.ioProc)
-        XCTAssertEqual(lifecycle.destroyObjects(), kAudioHardwareIllegalOperationError)
-        XCTAssertEqual(destroyedObjects.value, 0)
-        XCTAssertEqual(lifecycle.deviceID, 10)
-        XCTAssertEqual(lifecycle.tapID, 20)
-
-        XCTAssertEqual(lifecycle.stopIO(), noErr)
-        XCTAssertNil(lifecycle.ioProc)
-        XCTAssertEqual(lifecycle.destroyObjects(), noErr)
-        XCTAssertEqual(destroyedObjects.value, 2)
     }
 
     @MainActor func testRealCapabilityDiscoveryCompletesQuickly() async throws {

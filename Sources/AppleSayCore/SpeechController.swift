@@ -36,17 +36,12 @@ public struct AudioPlacement: Equatable, Sendable {
     public private(set) var state: SpeechJobState = .idle
     public private(set) var lastResult: SpeechResult?
     private let system: any SpeechSystem
-    private let playback: any AudioPlayback
+    private let playback = TimelinePlayback()
+    var previewAudio: ((URL, String?) async throws -> Void)?
     private var job: Task<Void, Error>?
 
     public init(system: any SpeechSystem) {
         self.system = system
-        self.playback = TimelinePlayback()
-    }
-
-    init(system: any SpeechSystem, playback: any AudioPlayback) {
-        self.system = system
-        self.playback = playback
     }
 
     public nonisolated static func analyze(_ text: String) -> ParsedDocument {
@@ -160,7 +155,11 @@ public struct AudioPlacement: Equatable, Sendable {
                 try await Task.detached { try AudioFiles.convert(timeline, to: artifact, settings: output) }.cancellableValue()
             } else {
                 state = .previewing
-                try await playback.play(timeline, device: settings.outputDevice)
+                if let previewAudio {
+                    try await previewAudio(timeline, settings.outputDevice)
+                } else {
+                    try await playback.play(timeline, device: settings.outputDevice)
+                }
             }
         }
         try Task.checkCancellation()
@@ -180,7 +179,9 @@ public struct AudioPlacement: Equatable, Sendable {
             }
             return false
         } catch SpeechError.nativeOutputUnavailable {
-            guard request.settings.voice?.isPersonal == true, let destination = request.destination else { throw errorForNativeRoute() }
+            guard request.settings.voice?.isPersonal == true, let destination = request.destination else {
+                throw SpeechError.processFailed("The native speech output path is unavailable.")
+            }
             let capture = scratch.appendingPathComponent(UUID().uuidString + ".caf")
             let captureRequest = SpeechRequest(text: request.text, settings: request.settings, destination: capture,
                                                output: .init(container: .caf))
@@ -217,10 +218,6 @@ public struct AudioPlacement: Equatable, Sendable {
                 personalVoiceCapability = .ready
             }
         }
-    }
-
-    private func errorForNativeRoute() -> SpeechError {
-        .processFailed("The native speech output path is unavailable.")
     }
 
     private struct RenderedTimeline {

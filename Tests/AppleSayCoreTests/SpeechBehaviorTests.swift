@@ -60,17 +60,6 @@ import Testing
     }
 }
 
-@MainActor final class TestAudioPlayback: AudioPlayback {
-    var durations: [Double] = []
-    var devices: [String?] = []
-    var stopped = false
-    func play(_ url: URL, device: String?) async throws {
-        durations.append(try AudioFiles.duration(of: url))
-        devices.append(device)
-    }
-    func stop() { stopped = true }
-}
-
 @Suite @MainActor struct SpeechBehaviorTests {
     @Test func validLRCIsRecognizedWithMetadataAndRepeatedTimestamps() {
         let document = SpeechController.analyze("[ar:Artist]\n[00:03.25][00:06.00]Hello\n[00:01.00]First")
@@ -223,8 +212,13 @@ import Testing
     @Test func timedTextPreviewUsesTheSameAbsoluteTimelineAsExport() async throws {
         let system = TestSpeechSystem()
         system.durations = ["One": 0.2, "Two": 0.2]
-        let playback = TestAudioPlayback()
-        let controller = SpeechController(system: system, playback: playback)
+        var playedDurations: [Double] = []
+        var playedDevices: [String?] = []
+        let controller = SpeechController(system: system)
+        controller.previewAudio = { url, device in
+            playedDurations.append(try AudioFiles.duration(of: url))
+            playedDevices.append(device)
+        }
         try await controller.refresh()
         var settings = SpeechSettings(voice: system.availableVoices[0])
         settings.outputDevice = "device-1"
@@ -233,9 +227,9 @@ import Testing
 
         #expect(controller.lastResult?.format == .lrc)
         #expect(controller.lastResult?.placements.map(\.start) == [1, 3])
-        #expect(playback.devices.count == 1)
-        #expect(playback.devices[0] == "device-1")
-        #expect(playback.durations.first ?? 0 >= 3.19)
+        #expect(playedDevices.count == 1)
+        #expect(playedDevices[0] == "device-1")
+        #expect(playedDurations.first ?? 0 >= 3.19)
     }
 
     @Test func personalVoiceExportUsesCaptureOnlyAfterNativeOutputIsUnavailable() async throws {

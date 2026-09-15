@@ -75,65 +75,12 @@ import Foundation
     }
 }
 
-/// The callback owns its mutable recording state until Core Audio stops and its
-/// serial queue drains. Only then may the main thread close the file or read results.
-struct CoreAudioCleanupOperations: Sendable {
-    var stopDevice: @Sendable (AudioObjectID, AudioDeviceIOProcID) -> OSStatus
-    var destroyIO: @Sendable (AudioObjectID, AudioDeviceIOProcID) -> OSStatus
-    var destroyDevice: @Sendable (AudioObjectID) -> OSStatus
-    var destroyTap: @Sendable (AudioObjectID) -> OSStatus
-
-    static let system = CoreAudioCleanupOperations(
-        stopDevice: AudioDeviceStop,
-        destroyIO: AudioDeviceDestroyIOProcID,
-        destroyDevice: AudioHardwareDestroyAggregateDevice,
-        destroyTap: { tap in
-            guard #available(macOS 14.2, *) else { return noErr }
-            return AudioHardwareDestroyProcessTap(tap)
-        }
-    )
-}
-
-final class CaptureResourceLifecycle {
-    var tapID = AudioObjectID(kAudioObjectUnknown)
-    var deviceID = AudioObjectID(kAudioObjectUnknown)
-    var ioProc: AudioDeviceIOProcID?
-    var isRunning = false
-    private let operations: CoreAudioCleanupOperations
-
-    init(operations: CoreAudioCleanupOperations = .system) { self.operations = operations }
-
-    func stopIO() -> OSStatus {
-        guard let ioProc else { return noErr }
-        if isRunning {
-            let stopStatus = operations.stopDevice(deviceID, ioProc)
-            guard stopStatus == noErr else { return stopStatus }
-            isRunning = false
-        }
-        let destroyStatus = operations.destroyIO(deviceID, ioProc)
-        if destroyStatus == noErr { self.ioProc = nil }
-        return destroyStatus
-    }
-
-    func destroyObjects() -> OSStatus {
-        guard ioProc == nil else { return kAudioHardwareIllegalOperationError }
-        if deviceID != kAudioObjectUnknown {
-            let result = operations.destroyDevice(deviceID)
-            guard result == noErr else { return result }
-            deviceID = AudioObjectID(kAudioObjectUnknown)
-        }
-        if tapID != kAudioObjectUnknown {
-            let result = operations.destroyTap(tapID)
-            guard result == noErr else { return result }
-            tapID = AudioObjectID(kAudioObjectUnknown)
-        }
-        return noErr
-    }
-}
-
 private final class ProcessAudioTap: @unchecked Sendable {
     private let queue = DispatchQueue(label: "AppleSay.PersonalVoiceCapture")
-    private let resources = CaptureResourceLifecycle()
+    private var tapID = AudioObjectID(kAudioObjectUnknown)
+    private var deviceID = AudioObjectID(kAudioObjectUnknown)
+    private var ioProc: AudioDeviceIOProcID?
+    private var isRunning = false
     private var file: ExtAudioFileRef?
     private var destination: URL?
     private var bytesPerFrame: UInt32 = 0
@@ -148,13 +95,13 @@ private final class ProcessAudioTap: @unchecked Sendable {
         description.name = "Apple Say Personal Voice Export"
         description.isPrivate = true
         description.muteBehavior = .mutedWhenTapped
-        try require(AudioHardwareCreateProcessTap(description, &resources.tapID), "create a process audio tap")
+        try require(AudioHardwareCreateProcessTap(description, &tapID), "create a process audio tap")
 
         var address = AudioObjectPropertyAddress(mSelector: kAudioTapPropertyFormat,
             mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
         var format = AudioStreamBasicDescription()
         var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
-        try require(AudioObjectGetPropertyData(resources.tapID, &address, 0, nil, &size, &format), "read the captured PCM format")
+        try require(AudioObjectGetPropertyData(tapID, &address, 0, nil, &size, &format), "read the captured PCM format")
         guard format.mFormatID == kAudioFormatLinearPCM,
               format.mFormatFlags & kAudioFormatFlagIsFloat != 0,
               format.mBitsPerChannel == 32, format.mBytesPerFrame > 0,
@@ -185,15 +132,15 @@ private final class ProcessAudioTap: @unchecked Sendable {
                 kAudioSubTapDriftCompensationKey: true
             ]]
         ]
-        try require(AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &resources.deviceID), "create a private capture device")
-        try require(AudioDeviceCreateIOProcIDWithBlock(&resources.ioProc, resources.deviceID, queue) { [self] _, input, _, _, _ in
+        try require(AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &deviceID), "create a private capture device")
+        try require(AudioDeviceCreateIOProcIDWithBlock(&ioProc, deviceID, queue) { [self] _, input, _, _, _ in
             record(input)
         }, "attach the PCM recorder")
         try require(
-            AudioDeviceStart(resources.deviceID, resources.ioProc),
+            AudioDeviceStart(deviceID, ioProc),
             "start audio capture; allow Apple Say in System Settings → Privacy & Security → Screen & System Audio Recording"
         )
-        resources.isRunning = true
+        isRunning = true
     }
 
     private func record(_ input: UnsafePointer<AudioBufferList>) {
@@ -241,15 +188,35 @@ private final class ProcessAudioTap: @unchecked Sendable {
         func record(_ result: OSStatus) {
             if status == noErr, result != noErr { status = result }
         }
-        record(resources.stopIO())
-        guard resources.ioProc == nil else { return status }
+        if let ioProc {
+            if isRunning {
+                let stopStatus = AudioDeviceStop(deviceID, ioProc)
+                record(stopStatus)
+                if stopStatus == noErr { isRunning = false }
+            }
+            let destroyStatus = AudioDeviceDestroyIOProcID(deviceID, ioProc)
+            record(destroyStatus)
+            if destroyStatus == noErr { self.ioProc = nil }
+        }
+        guard ioProc == nil else { return status }
         queue.sync {}
         if let file {
             let disposeStatus = ExtAudioFileDispose(file)
             record(disposeStatus)
             if disposeStatus == noErr { self.file = nil }
         }
-        record(resources.destroyObjects())
+        if deviceID != kAudioObjectUnknown {
+            let destroyStatus = AudioHardwareDestroyAggregateDevice(deviceID)
+            record(destroyStatus)
+            if destroyStatus == noErr { deviceID = AudioObjectID(kAudioObjectUnknown) }
+        }
+        if tapID != kAudioObjectUnknown {
+            if #available(macOS 14.2, *) {
+                let destroyStatus = AudioHardwareDestroyProcessTap(tapID)
+                record(destroyStatus)
+                if destroyStatus == noErr { tapID = AudioObjectID(kAudioObjectUnknown) }
+            }
+        }
         return status
     }
 

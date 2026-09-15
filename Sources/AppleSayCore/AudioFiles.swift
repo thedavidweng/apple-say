@@ -1,6 +1,5 @@
 import AVFAudio
 import AudioToolbox
-import AppleSayAudioBridge
 import Foundation
 
 /// Streams PCM in bounded blocks: long intentional gaps never allocate a timeline-sized buffer.
@@ -155,9 +154,12 @@ enum AudioFiles {
             var value = UInt32(quality)
             try check(AudioConverterSetProperty(converter, kAudioConverterCodecQuality, 4, &value))
         }
-        // Commit the converter's concrete settings so the file header and encoder agree.
-        // The C boundary is needed because this property contains a CFArrayRef pointer.
-        try check(AppleSayCommitExtAudioFileConverter(file, converter))
+        var config: CFArray?
+        var configSize = UInt32(MemoryLayout<CFArray?>.size)
+        let status = AudioConverterGetProperty(converter, kAudioConverterPropertySettings, &configSize, &config)
+        if status == noErr {
+            try check(ExtAudioFileSetProperty(file, kExtAudioFileProperty_ConverterConfig, configSize, &config))
+        }
     }
 
     private static let pcmFormatRegex = try? NSRegularExpression(pattern: #"^(BE|LE)?([IF])(8|16|24|32|64)$"#)

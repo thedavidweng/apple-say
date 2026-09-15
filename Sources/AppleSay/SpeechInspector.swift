@@ -63,25 +63,16 @@ struct SpeechInspector: View {
                     }
                 }
                 .accessibilityElement(children: .contain)
-                if let voice = settings.voice {
-                    if voice.quality < .enhanced && !voice.isPersonal {
-                        Text(strings.text(
-                            "Default system voices sound mechanical. Choose “Add Voices…” from the Voice menu to install Enhanced or Premium voices.",
-                            "系统默认声音偏机械。可从“声音”菜单中选择“添加声音…”，在系统设置中安装增强或高级声音。"
-                        ))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
-                } else {
-                    let info = systemVoiceInfo
-                    if info?.isSiri != true {
-                        Text(strings.text(
-                            "Default system voices sound mechanical. Choose “Add Voices…” from the Voice menu to install Enhanced or Premium voices.",
-                            "系统默认声音偏机械。可从“声音”菜单中选择“添加声音…”，在系统设置中安装增强或高级声音。"
-                        ))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
+                let showMechanicalWarning = settings.voice.map {
+                    $0.quality < .enhanced && !$0.isPersonal
+                } ?? (systemVoiceInfo?.isSiri != true)
+                if showMechanicalWarning {
+                    Text(strings.text(
+                        "Default system voices sound mechanical. Choose “Add Voices…” from the Voice menu to install Enhanced or Premium voices.",
+                        "系统默认声音偏机械。可从“声音”菜单中选择“添加声音…”，在系统设置中安装增强或高级声音。"
+                    ))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
                 LabeledContent(strings.text("Speech Speed", "语速")) {
                     HStack(spacing: 6) {

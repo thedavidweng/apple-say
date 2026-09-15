@@ -71,7 +71,7 @@ struct ApplicationCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
             Button(strings.text("About Apple Say", "关于 Apple Say")) {
-                AboutPanelController.shared.present()
+                NSApp.orderFrontStandardAboutPanel(nil)
             }
         }
     }

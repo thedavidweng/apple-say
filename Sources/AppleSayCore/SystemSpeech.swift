@@ -137,7 +137,7 @@ public struct SystemVoiceInfo: Equatable, Sendable {
         }
         let result = try await playback.run(arguments: arguments)
         if request.destination != nil, request.settings.voice?.isPersonal == true,
-           let unavailable = PersonalVoiceNativeOutput.unavailable(from: result) {
+           let unavailable = Self.personalVoiceNativeError(from: result) {
             throw unavailable
         }
         _ = try result.checked()
@@ -286,10 +286,8 @@ public struct SystemVoiceInfo: Equatable, Sendable {
         let rawName = voiceId.components(separatedBy: ".").last ?? voiceId
         return SystemVoiceInfo(identifier: voiceId, name: rawName, language: chosenLang, isSiri: isSiri)
     }
-}
 
-enum PersonalVoiceNativeOutput {
-    static func unavailable(from result: SayProcessResult) -> SpeechError? {
+    nonisolated static func personalVoiceNativeError(from result: SayProcessResult) -> SpeechError? {
         guard result.status != 0 else { return nil }
         let diagnostic = result.standardError.trimmingCharacters(in: .whitespacesAndNewlines)
         return .nativeOutputUnavailable(diagnostic.isEmpty

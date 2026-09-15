@@ -66,9 +66,7 @@ enum SayCatalog {
             if identifier == "lpcm" { return pcmCandidates(for: container) }
             return usefulCompressedFormats(for: container).contains(identifier) ? [identifier] : []
         }
-        var formats: [String] = []
-        for format in listedFormats where !formats.contains(format) { formats.append(format) }
-        let profiles = formats.map { format in
+        let profiles = Set(listedFormats).map { format in
             discoverProfile(format, container: container, aacBitRates: aacBitRates)
         }.sorted { left, right in
             if left.dataFormat == container.defaultDataFormat { return true }
