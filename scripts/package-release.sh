@@ -4,7 +4,6 @@ set -euo pipefail
 project_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$project_root"
 
-# 1. Build the app bundle using build-app.sh
 echo "==> Building Apple Say.app..."
 "$project_root/scripts/build-app.sh"
 
@@ -14,7 +13,7 @@ rm -rf "$dist_dir"
 mkdir -p "$dist_dir"
 
 echo "==> Packaging Apple-Say.zip..."
-ditto -c -k --sequesterRsrc --keepParent "$application" "$dist_dir/Apple-Say.zip"
+ditto -c -k --keepParent "$application" "$dist_dir/Apple-Say.zip"
 
 echo "==> Packaging Apple-Say.dmg..."
 dmg_staging="$project_root/build/dmg_staging"
@@ -28,10 +27,11 @@ hdiutil create \
     -srcfolder "$dmg_staging" \
     -ov \
     -format UDZO \
+    -imagekey zlib-level=9 \
     "$dist_dir/Apple-Say.dmg"
 rm -rf "$dmg_staging"
 
-# Also create symlinks for Apple-Say-macOS.* for backward-compat if needed
+# Keep legacy Apple-Say-macOS.* release URLs working.
 cd "$dist_dir"
 ln -s Apple-Say.dmg Apple-Say-macOS.dmg
 ln -s Apple-Say.zip Apple-Say-macOS.zip

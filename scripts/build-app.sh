@@ -3,12 +3,13 @@ set -euo pipefail
 
 project_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$project_root"
-swift build --configuration release
+swift build --configuration release -c release -Xswiftc -Osize -Xlinker -dead_strip
 binary_directory="$(swift build --configuration release --show-bin-path)"
 application="$project_root/build/Apple Say.app"
 rm -rf "$application"
 mkdir -p "$application/Contents/MacOS" "$application/Contents/Resources"
 cp "$binary_directory/AppleSay" "$application/Contents/MacOS/AppleSay"
+strip -x "$application/Contents/MacOS/AppleSay"
 cp "$project_root/Resources/Info.plist" "$application/Contents/Info.plist"
 xcrun actool \
     --compile "$application/Contents/Resources" \
@@ -23,5 +24,6 @@ rm "$application/Contents/icon-info.plist"
 for localization in "$project_root"/Resources/*.lproj; do
     ditto "$localization" "$application/Contents/Resources/$(basename "$localization")"
 done
+xattr -cr "$application"
 codesign --force --sign - "$application"
 printf '%s\n' "$application"

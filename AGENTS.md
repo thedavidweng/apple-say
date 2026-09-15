@@ -11,3 +11,7 @@ Use the default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-
 ### Domain docs
 
 This is a single-context repo; read root `CONTEXT.md` and `docs/adr/` as relevant. See `docs/agents/domain.md`.
+
+### Minimal footprint
+
+Pursue minimal app and repo footprint. Write zero dead or redundant code; always prefer compressed, compact assets and size-optimized builds.
