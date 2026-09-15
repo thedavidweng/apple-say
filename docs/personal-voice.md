@@ -64,42 +64,19 @@ Primary documentation:
   `AVSpeechSynthesis.h` specify process scoping, tap auto-start, asynchronous I/O,
   voice traits, and authorization states.
 
-## Real-device verification
+## Validation
 
 Automated orchestration tests exercise native success, native unavailability,
 capture success, capture unavailability, capture failure, authorization states,
 and composition with Timed Text using the same substitutable speech boundary.
-The macOS development machine also verified that a real `say` child registers a
-Core Audio process before standard input is released. This probe produced no
-speech and requested no capture permission.
+The development machine also confirms that a real `say` child registers a Core
+Audio process before standard input is released; this probe produces no speech
+and requests no capture permission. A signed build completed real-device
+acceptance on macOS 26.6.2, covering Preview, native Export, compatibility
+capture, LRC and Enhanced LRC placement, rate fitting, and Timing Error
+reporting.
 
-A signed Apple Say build on macOS 26.6.2 was authorized for the local `David 中文`
-Personal Voice. Preview completed through the selected Voice. Native Export
-produced a non-silent 2.425-second AIFF with 53,480 frames and a 0.6866 peak.
-
-To exercise the compatibility route on a system where native output now works,
-a temporary uncommitted verification build forced native output to report
-unavailable. The process tap then produced a non-silent 2.656-second AIFF with
-117,130 frames, 106,084 samples above 0.0001, and a 0.6938 peak. The forcing code was
-removed before the release build. This verifies real Personal Voice capture and
-conversion without shipping a test switch or alternate product path.
-
-The final signed build also completed Timed Text acceptance using the same local
-Personal Voice. LRC Preview completed, and Export produced a 4.4695-second AIFF;
-signal began at 1.0003 seconds and again at 3.5017 seconds for requested Timestamps
-of 1.00 and 3.50 seconds. Enhanced LRC Preview completed, and Export produced a
-4.4569-second AIFF whose three speech units began at 1.0056, 2.2000, and 4.0272
-seconds for requested Timed Fragment and Segment positions of 1.00, 2.20, and 4.00
-seconds.
-
-Real rate fitting used a sentence whose natural 175-words-per-minute Personal Voice
-render lasted 2.2273 seconds. A 1.70-second LRC window caused the orchestration to
-retry at 234 words per minute; the fitted signal lasted 1.6585 seconds and the next
-Segment remained at 2.70 seconds. An impossible 10-millisecond LRC window reported a
-Timing Error for line 1. The equivalent Enhanced LRC case identified line 1, Timed
-Fragment 1. Neither case published audio or moved a Timestamp.
-
-Before release across additional machines, repeat these environmental checks:
+## Pre-release verification on a new machine
 
 1. Listen to the complete native and captured artifacts and verify the first and
    last words. Compare
