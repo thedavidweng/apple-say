@@ -96,19 +96,19 @@ struct VoicePopUp: NSViewRepresentable {
     private func title(for voice: Voice) -> String {
         var title = voice.name
         if voice.isPersonal {
-            title += strings.text(" (Personal Voice)", "（个人声音）")
+            title += strings.text(" — Personal Voice", " — 个人声音")
         } else if voice.isNovelty {
-            title += strings.text(" (Novelty)", "（趣味声音）")
+            title += strings.text(" — Novelty", " — 趣味声音")
         } else {
             switch voice.quality {
             case .premium:
-                title += strings.text(" (Premium)", "（高级）")
+                title += strings.text(" — Premium", " — 高级")
             case .enhanced:
-                title += strings.text(" (Enhanced)", "（增强）")
+                title += strings.text(" — Enhanced", " — 增强")
             case .compact:
-                title += strings.text(" (Compact)", "（精简）")
+                title += strings.text(" — Compact", " — 精简")
             case .legacy:
-                title += strings.text(" (Legacy)", "（经典）")
+                title += strings.text(" — Legacy", " — 经典")
             case .standard:
                 break
             }

@@ -33,8 +33,8 @@ struct SpeechInspector: View {
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
                 .help(strings.text(
-                    "Choose a Voice, or choose “Add Voices…” from the menu to install higher quality voices.",
-                    "选择声音，或从菜单中选择“添加声音…”安装更高品质的声音。"
+                    "Shows voices installed on this Mac. Download more voices in System Settings.",
+                    "此处显示本机已安装的声音。可前往系统设置下载更多声音。"
                 ))
                 HStack(spacing: 8) {
                     Text(strings.text("Voice Quality", "声音品质"))
