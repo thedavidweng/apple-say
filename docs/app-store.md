@@ -13,19 +13,11 @@
 - **App Privacy:** Data Not Collected
 - **Encryption:** No non-exempt encryption
 
-Apple Say turns the voices already on your Mac into a focused native writing and
-audio tool. Enter or open text, choose a system voice, listen instantly, and export
-the result as an audio file without constructing Terminal commands.
+Apple Say turns your Mac's built-in voices into a native speech and audio studio. Type or import text, select a system or Personal Voice, preview playback, and export audio files instantly without Terminal commands.
 
-Plain Text, LRC, and Enhanced LRC share one editor. Apple Say recognizes valid timed
-text automatically, preserves its timeline, adds intentional silence, and reports a
-clear Timing Error when spoken content cannot fit the requested timestamps.
+Plain Text, LRC, and Enhanced LRC share a single editor. Apple Say recognizes valid timed text automatically, preserves timelines and pause intervals, and reports clear Timing Errors when speech cannot fit timestamps.
 
-Choose from installed voices, filter them by language, adjust speech speed and pitch,
-and open the exact System Settings pages for adding voices or managing Personal
-Voice. Personal Voice authorization uses the native macOS flow. Speech synthesis and
-audio export happen locally through macOS system services, with no account, cloud
-speech service, analytics, or third-party runtime.
+Filter voices by language, adjust speed and pitch, and jump directly to System Settings to add voices. Runs completely locally via macOS system services — zero accounts, cloud dependencies, or tracking.
 
 ## 简体中文
 
@@ -40,17 +32,11 @@ speech service, analytics, or third-party runtime.
 - **App 隐私：** 不收集数据
 - **加密：** 不使用需要申报的加密
 
-Apple Say 将 Mac 上已有的声音变成一款专注、原生的文本与音频工具。输入或
-打开文本，选择系统声音，即可播放并导出音频，无需编写终端命令。
+Apple Say 将 Mac 原生语音化为简洁高效的文本朗读与音频制作工作台。输入或导入文本，选择系统或个人声音，即可一键试听并导出音频，无需终端命令。
 
-纯文本、LRC 与增强型 LRC 共用同一个编辑器。Apple Say 会自动识别有效的
-定时文本，保留原始时间线和静音间隔；当语音无法适配指定时间戳时，会明确
-显示时间错误。
+纯文本、LRC 与增强型 LRC 共用统一编辑器。自动识别时间轴语法，精确对齐时间戳与静音区间；超出时间限制时清晰提示时序错误。
 
-你可以按语言筛选已安装声音，调整语速与音高，并直接打开添加声音或管理
-个人声音所需的系统设置页面。个人声音授权使用 macOS 原生流程。语音合成
-与音频导出均由 Mac 本地完成，无需账户、云端语音服务、分析工具或第三方
-运行时。
+支持按语言筛选声音，精确微调语速与音高，一键跳转系统设置管理声音。完全通过 Mac 本地服务运行，无需账户、云端依赖或数据统计。
 
 ## Submission assets
 

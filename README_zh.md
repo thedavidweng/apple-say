@@ -22,20 +22,18 @@
 
 ---
 
-**Apple Say** 是一个 macOS 原生语音合成与时间轴音频制作工具。直接调用 macOS 内置的系统语音合成器与 `/usr/bin/say`，支持纯文本、LRC 与增强型 LRC 文档的编辑、实时试听与音频导出。
-
-所有语音合成均在本地离线运行，无网络请求，无需订阅。
+**Apple Say** 是专为 macOS 打造的原生语音合成与时间轴音频工具。基于系统内置语音引擎与 `/usr/bin/say`，支持纯文本、LRC 及增强型 LRC 的编辑、实时试听与音频导出——完全本地离线，无网络请求，无需订阅。
 
 ---
 
 ## ✨ 核心特性
 
-- 📄 **直接编辑与试听**：启动直接进入编辑界面，无需预先保存文件即可输入文本并试听或导出。
-- ⏱️ **时间轴自适应**：支持纯文本、LRC（行级时间戳）与增强型 LRC（字/词级时间戳）。系统会测量渲染时长并自适应语速，保证语音与时间戳位置匹配。
-- 🗣️ **系统声音与个人声音**：识别 macOS 中已安装的所有语音并支持按语言筛选；支持 **系统声音（System Voice）**（可直接使用在辅助功能中设置的 Siri 语音），并支持经系统授权的 Apple **个人声音（Personal Voice）**。
-- 🎛️ **语音检查器（Speech Inspector）**：支持调整语速与音高，选择输出格式（AAC、AIFF、WAV、CAF），并可配置声道数、采样率、比特率与转换质量。
-- 🎧 **播放试听与导出**：支持通过快捷键播放试听，或通过 macOS 标准存储面板导出音频文件。
-- 🔒 **本地离线**：完全在本地离线运行，无网络请求与用户行为统计，不依赖第三方运行时。
+- 📄 **即开即写**：启动即进入编辑态，免存盘直接试听与导出。
+- ⏱️ **自适应对齐**：支持纯文本、LRC（行级）与增强型 LRC（字词级），按时间戳自适应调节语速。
+- 🗣️ **系统与个人声音**：支持已安装系统语音（含辅助功能 Siri 语音）及经授权的 Apple 个人声音（Personal Voice），支持按语言筛选。
+- 🎛️ **语音检查器**：精细调节语速与音高，支持多种容器格式（AAC、AIFF、WAV、CAF）以及声道、采样率、比特率配置。
+- 🎧 **快捷试听与导出**：键盘快捷键即时试听，原生存储面板一键导出。
+- 🔒 **本地离线隐私**：完全在本地运行。零埋点、零网络通信、零第三方运行时依赖。
 
 ---
 
@@ -43,46 +41,44 @@
 
 ### 通过 Homebrew 安装（推荐）
 
-通过 [thedavidweng/homebrew-tap](https://github.com/thedavidweng/homebrew-tap) 快速安装：
-
 ```bash
 brew install --cask thedavidweng/tap/apple-say
 ```
 
-后续更新应用只需运行：
+后续更新：
 
 ```bash
 brew upgrade --cask apple-say
 ```
 
-### 手动下载安装
+### 手动下载
 
-1. 前往 [GitHub Releases](https://github.com/thedavidweng/apple-say/releases) 页面下载最新的 `Apple-Say.dmg`。
-2. 双击打开镜像，将 **Apple Say.app** 拖拽至系统的 `应用程序`（`/Applications`）目录。
-3. 从“启动台”或“访达”中直接打开应用。
+1. 前往 [GitHub Releases](https://github.com/thedavidweng/apple-say/releases) 下载 `Apple-Say.dmg`。
+2. 将 **Apple Say.app** 拖拽至 `/Applications`（应用程序）目录。
+3. 从启动台或聚焦搜索打开应用。
 
 > [!NOTE]
-> 预编译版本当前使用临时签名（ad-hoc signed）。首次打开若系统提示未签名或安全性警告，可右键单击 **Apple Say.app** 选择 **“打开”** 并确认，或在终端中执行：
+> 预编译版本采用临时签名（ad-hoc signed）。首次打开若遇 Gatekeeper 安全提示，右键 **Apple Say.app** 选择 **“打开”**，或在终端执行：
 > `xattr -cr "/Applications/Apple Say.app"`
 
 ---
 
 ## 📖 支持的文档格式
 
-Apple Say 会根据语法结构自动识别文档模式：
+根据语法结构自动识别文档模式：
 
-- **纯文本（Plain Text）**：标准 UTF-8 文本，用于连续朗读。
-- **LRC**：具有行级时间戳的对齐文本：
+- **纯文本（Plain Text）**：连续文本朗读，无时间戳。
+- **LRC**：行级时间戳对齐：
   ```lrc
   [00:02.00] 你好，欢迎使用 Apple Say。
   [00:05.50] 这是行级对齐的时间轴语音。
   ```
-- **增强型 LRC（Enhanced LRC）**：具备字级或词组级行内时间戳的对齐文本：
+- **增强型 LRC（Enhanced LRC）**：字词级行内时间戳对齐：
   ```lrc
   [00:01.00] <00:01.20> 精准 <00:02.00> 逐字 <00:02.80> 朗读对齐。
   ```
 
-当出现语法冲突或超出时序限制时，编辑器会按纯文本处理并报告时序错误（Timing Error），不会直接修改文本或变更时间戳。
+若存在语法冲突或时序溢出，安全降级为纯文本或报告时序错误（Timing Error），绝不篡改原始内容与时间戳。
 
 ---
 
@@ -93,7 +89,7 @@ Apple Say 会根据语法结构自动识别文档模式：
 | **试听预览（Preview）** | `⌘ Return` |
 | **停止播放（Stop）** | `⌘ .` |
 | **导出音频（Export Audio）** | `⇧ ⌘ E` |
-| **显示/隐藏语音检视器** | `⌥ ⌘ I` |
+| **显示/隐藏语音检查器** | `⌥ ⌘ I` |
 
 ---
 
@@ -101,52 +97,47 @@ Apple Say 会根据语法结构自动识别文档模式：
 
 ### 环境要求
 
-- macOS 14.0 (Sonoma) 或更高版本
-- Xcode 26 或更高版本（包含 Swift 6 工具链与 Icon Composer 构建工具）
+- macOS 14.0+
+- Xcode 26+（含 Swift 6 工具链与 Icon Composer）
 
-### 构建步骤
+### 编译与运行
 
 ```bash
-# 克隆代码仓库
 git clone https://github.com/thedavidweng/apple-say.git
 cd apple-say
 
-# 编译生成独立应用包
+# 编译独立应用包
 ./scripts/build-app.sh
 
-# 打开构建好的应用
+# 打开应用
 open "build/Apple Say.app"
 ```
 
-### 运行单元测试
+### 测试与打包
 
 ```bash
+# 运行单元测试
 swift test
-```
 
-### 打包发布产物
-
-```bash
+# 打包发布产物至 dist/
 ./scripts/package-release.sh
 ```
-
-生成的安装包（`Apple-Say.dmg`、`Apple-Say.zip` 及 `checksums.txt`）将存放于 `dist/` 目录中。
 
 ---
 
 ## 🛡️ 隐私与系统权限
 
-Apple Say 不会收集、存储、上传或共享任何个人数据。
+Apple Say 绝不收集、存储、上传或共享任何个人数据。
 
-- **系统语音**：所有语音合成完全在你的 Mac 本地通过 macOS 系统接口完成。
-- **个人声音（Personal Voice）**：选用 macOS 个人声音时，系统会弹出授权请求。Apple Say 仅将该权限用于朗读与导出你指定的内容。
+- **系统语音**：完全调用 macOS 原生系统接口在本地完成合成。
+- **个人声音（Personal Voice）**：使用 macOS 原生授权弹窗，仅用于用户明确指定的试听与导出。
 
-详细政策参见 [PRIVACY.md](PRIVACY.md)。
+详细说明参见 [PRIVACY.md](PRIVACY.md)。
 
 ---
 
-## 📄 规范与参与贡献
+## 📄 文档与参与贡献
 
-- 项目领域词汇与设计规范详见 [CONTEXT.md](CONTEXT.md)。
-- 代码贡献准则与提交前检查清单详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
-- 欢迎通过 [GitHub Issues](https://github.com/thedavidweng/apple-say/issues) 提交问题反馈、功能建议或贡献代码。
+- 领域术语与设计规范：[CONTEXT.md](CONTEXT.md)
+- 贡献指南与提交前检查：[CONTRIBUTING.md](CONTRIBUTING.md)
+- 问题反馈与功能建议：[GitHub Issues](https://github.com/thedavidweng/apple-say/issues)

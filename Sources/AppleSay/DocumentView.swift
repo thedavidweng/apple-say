@@ -9,6 +9,9 @@ import AppleSayCore
 /// while giving the insertion point and text a comfortable internal margin.
 private struct DocumentTextEditor: NSViewRepresentable {
     @Binding var text: String
+    @Binding var requestedReplacement: String?
+    @Binding var writingToolsActive: Bool
+    @Binding var composingText: Bool
     let accessibilityLabel: String
     let accessibilityHelp: String
 
@@ -29,6 +32,8 @@ private struct DocumentTextEditor: NSViewRepresentable {
         textView.autoresizingMask = [.width]
         textView.textContainer?.widthTracksTextView = true
         configureTextContainer(textView)
+        configureWritingTools(textView)
+        configureWritingToolsMenu(textView)
         textView.drawsBackground = true
         textView.backgroundColor = .textBackgroundColor
         textView.string = text
@@ -43,7 +48,18 @@ private struct DocumentTextEditor: NSViewRepresentable {
         context.coordinator.parent = self
         let textView = textView(in: scrollView)
         configureTextContainer(textView)
-        if textView.string != text {
+        configureWritingTools(textView)
+        configureWritingToolsMenu(textView)
+        if let replacement = requestedReplacement {
+            let fullRange = NSRange(location: 0, length: textView.string.utf16.count)
+            if textView.shouldChangeText(in: fullRange, replacementString: replacement) {
+                textView.replaceCharacters(in: fullRange, with: replacement)
+                textView.didChangeText()
+            }
+            DispatchQueue.main.async { requestedReplacement = nil }
+            return
+        }
+        if !textView.hasMarkedText(), textView.string != text {
             textView.string = text
         }
         textView.setAccessibilityLabel(accessibilityLabel)
@@ -53,6 +69,24 @@ private struct DocumentTextEditor: NSViewRepresentable {
     private func configureTextContainer(_ textView: NSTextView) {
         textView.textContainerInset = NSSize(width: 20, height: 16)
         textView.textContainer?.lineFragmentPadding = 0
+    }
+
+    private func configureWritingTools(_ textView: NSTextView) {
+        if #available(macOS 15.0, *) {
+            textView.writingToolsBehavior = .default
+            textView.allowedWritingToolsResultOptions = .plainText
+        }
+    }
+
+    private func configureWritingToolsMenu(_ textView: NSTextView) {
+        guard #available(macOS 15.2, *), let menu = textView.menu,
+              let writingToolsItem = NSMenuItem.writingToolsItems.first,
+              !menu.items.contains(where: { $0.identifier == writingToolsItem.identifier }) else { return }
+        // NSTextView does not consistently perform its advertised automatic
+        // insertion, so install AppKit's own standard Writing Tools submenu.
+        menu.automaticallyInsertsWritingToolsItems = false
+        menu.insertItem(writingToolsItem.copy() as! NSMenuItem, at: 0)
+        menu.insertItem(.separator(), at: 1)
     }
 
     private func textView(in scrollView: NSScrollView) -> NSTextView {
@@ -72,6 +106,32 @@ private struct DocumentTextEditor: NSViewRepresentable {
         func textDidChange(_ notification: Notification) {
             guard let textView = notification.object as? NSTextView else { return }
             parent.text = textView.string
+            parent.composingText = textView.hasMarkedText()
+        }
+
+        func textViewDidChangeSelection(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            // IME pre-edit text lives in NSTextView's marked range before it is
+            // committed to the SwiftUI binding, so selection changes own this state.
+            parent.composingText = textView.hasMarkedText()
+        }
+
+        @available(macOS 15.0, *)
+        func textViewWritingToolsWillBegin(_ textView: NSTextView) {
+            parent.writingToolsActive = true
+        }
+
+        @available(macOS 15.0, *)
+        func textViewWritingToolsDidEnd(_ textView: NSTextView) {
+            parent.writingToolsActive = false
+        }
+
+        @available(macOS 15.0, *)
+        func textView(
+            _ textView: NSTextView,
+            writingToolsIgnoredRangesInEnclosingRange enclosingRange: NSRange
+        ) -> [NSValue] {
+            TimedTextMarkup.ranges(in: textView.string, intersecting: enclosingRange).map(NSValue.init(range:))
         }
     }
 }
@@ -91,6 +151,14 @@ struct DocumentView: View {
     @State private var errorMessage: String?
     @State private var showPersonalVoiceSettingsGuidance = false
     @State private var refreshing = false
+    @State private var requestedReplacement: String?
+    @State private var translationSuggestion: TranslationSuggestion?
+    @State private var translationRequest: TranslationRequest?
+    @State private var translationProposal: TranslationProposal?
+    @State private var dismissedTranslationTarget: String?
+    @State private var translating = false
+    @State private var writingToolsActive = false
+    @State private var composingText = false
 
     init(text: String = "", fileURL: URL? = nil) {
         _text = State(initialValue: text)
@@ -104,9 +172,12 @@ struct DocumentView: View {
     private var selectedVoiceAvailable: Bool {
         settings.voice.map { selected in speech.voices.contains { $0.id == selected.id } } ?? true
     }
-    private var canPreview: Bool { hasText && !busy && selectedVoiceAvailable && !speech.voices.isEmpty }
+    private var canPreview: Bool {
+        hasText && !busy && !writingToolsActive && selectedVoiceAvailable && !speech.voices.isEmpty
+    }
     private var canExport: Bool { canPreview && !speech.capabilities.outputs.isEmpty }
     private var isWelcomePromptActive: Bool { fileURL == nil && text == strings.welcomeText && !busy }
+    private var translationTargetIdentifier: String { settings.voice?.language ?? language }
 
     var body: some View {
         documentCanvas
@@ -155,6 +226,26 @@ struct DocumentView: View {
             return true
         }
         .onDisappear { speech.stop() }
+        .task(id: TranslationDetectionInput(
+            document: text,
+            targetIdentifier: translationTargetIdentifier,
+            dismissedTargetIdentifier: dismissedTranslationTarget,
+            writingToolsActive: writingToolsActive
+        )) {
+            await detectTranslationNeed()
+        }
+        .overlay { translationRunner }
+        .sheet(item: $translationProposal) { proposal in
+            TranslationReviewSheet(
+                proposal: proposal,
+                strings: strings,
+                cancel: { translationProposal = nil },
+                replace: {
+                    requestedReplacement = proposal.translated
+                    translationProposal = nil
+                }
+            )
+        }
         .alert("Apple Say", isPresented: Binding(
             get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } }
         )) {
@@ -177,6 +268,10 @@ struct DocumentView: View {
     private var documentCanvas: some View {
         VStack(spacing: 0) {
             documentEditor
+            if let translationSuggestion, !writingToolsActive {
+                Divider()
+                translationBanner(translationSuggestion)
+            }
             Divider()
             statusBar
         }
@@ -186,13 +281,16 @@ struct DocumentView: View {
         ZStack(alignment: .topLeading) {
             DocumentTextEditor(
                 text: $text,
+                requestedReplacement: $requestedReplacement,
+                writingToolsActive: $writingToolsActive,
+                composingText: $composingText,
                 accessibilityLabel: strings.text("Document text", "文稿文本"),
                 accessibilityHelp: strings.text(
                     "Enter Plain Text, LRC, or Enhanced LRC to speak.",
                     "输入纯文本、LRC 或增强型 LRC 后即可播放。"
                 )
             )
-            if text.isEmpty {
+            if text.isEmpty && !composingText {
                 Text(strings.text("Enter text to speak…", "输入要朗读的文本…"))
                     .font(.system(size: 16))
                     .foregroundStyle(Color(nsColor: .placeholderTextColor))
@@ -203,6 +301,74 @@ struct DocumentView: View {
             }
         }
         .background(Color(nsColor: .textBackgroundColor))
+    }
+
+    private func translationBanner(_ suggestion: TranslationSuggestion) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "translate")
+                .foregroundStyle(.secondary)
+            Text(strings.text(
+                "This Document appears to be in \(suggestion.sourceName).",
+                "此文稿似乎是\(suggestion.sourceName)。"
+            ))
+            Spacer()
+            if translating { ProgressView().controlSize(.small) }
+            Button(strings.text(
+                "Translate to \(suggestion.targetName)…",
+                "翻译为\(suggestion.targetName)…"
+            )) {
+                translating = true
+                translationRequest = TranslationRequest(
+                    source: suggestion.source,
+                    target: suggestion.target,
+                    document: text
+                )
+            }
+            .disabled(translating || busy || writingToolsActive)
+            Button {
+                dismissedTranslationTarget = translationTargetIdentifier
+                translationSuggestion = nil
+            } label: {
+                Image(systemName: "xmark")
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help(strings.text("Dismiss", "关闭"))
+            .disabled(translating)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    @ViewBuilder private var translationRunner: some View {
+        if #available(macOS 15.0, *), let translationRequest {
+            TranslationRunner(request: translationRequest) { result in
+                Task { @MainActor in
+                    translating = false
+                    self.translationRequest = nil
+                    switch result {
+                    case .success(let translated):
+                        guard text == translationRequest.document else {
+                            errorMessage = strings.text(
+                                "The Document changed while it was being translated. Try again with the current text.",
+                                "翻译期间文稿已发生变化。请使用当前文本重试。"
+                            )
+                            return
+                        }
+                        let targetName = translationSuggestion?.targetName
+                            ?? translationRequest.target.minimalIdentifier
+                        translationProposal = TranslationProposal(
+                            original: translationRequest.document,
+                            translated: translated,
+                            targetName: targetName
+                        )
+                    case .failure(let error):
+                        errorMessage = error.localizedDescription
+                    }
+                }
+            }
+        }
     }
 
     @ToolbarContentBuilder private var speechToolbar: some ToolbarContent {
@@ -308,6 +474,25 @@ struct DocumentView: View {
         }
     }
 
+    @MainActor private func detectTranslationNeed() async {
+        translationSuggestion = nil
+        guard #available(macOS 15.0, *),
+              !writingToolsActive,
+              translationTargetIdentifier != dismissedTranslationTarget else { return }
+        do {
+            try await Task.sleep(for: .milliseconds(600))
+            try Task.checkCancellation()
+            translationSuggestion = await NativeLanguageFeatures.translationSuggestion(
+                for: text,
+                targetIdentifier: translationTargetIdentifier,
+                displayLocale: strings.locale
+            )
+        } catch is CancellationError {
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     @MainActor private func refresh() async {
         guard !refreshing, !busy else { return }
         refreshing = true
@@ -341,6 +526,7 @@ struct DocumentView: View {
     private func newDocument() {
         text = ""
         fileURL = nil
+        dismissedTranslationTarget = nil
     }
 
     private func openFile() {
@@ -361,6 +547,7 @@ struct DocumentView: View {
             let content = try String(contentsOf: url, encoding: .utf8)
             text = content
             fileURL = url
+            dismissedTranslationTarget = nil
         } catch {
             errorMessage = error.localizedDescription
         }

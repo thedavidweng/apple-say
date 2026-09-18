@@ -22,20 +22,18 @@
 
 ---
 
-**Apple Say** is a native macOS application for speech synthesis and timed-audio creation. It uses macOS system speech synthesizers and `/usr/bin/say` to write, preview, and export Plain Text, LRC, and Enhanced LRC documents.
-
-Speech synthesis runs locally using macOS system components without external network requests or subscriptions.
+**Apple Say** is a native macOS studio for speech synthesis and timed audio. It writes, previews, and exports Plain Text, LRC, and Enhanced LRC documents using system voices and `/usr/bin/say` — fully local, offline, and subscription-free.
 
 ---
 
 ## ✨ Features
 
-- 📄 **Editor Workflow**: Launches directly into an editor window. Enter text and preview or export audio without having to save a file first.
-- ⏱️ **Timed-Text Alignment**: Supports Plain Text, LRC (line-level timing), and Enhanced LRC (word/fragment-level timing). When timestamps are present, speech duration is measured and playback speed is adjusted to keep speech within each interval.
-- 🗣️ **System & Personal Voices**: Lists voices installed on macOS with language filtering. Supports macOS **System Voice** (including Siri voices configured under Spoken Content) and authorized **Personal Voice** profiles.
-- 🎛️ **Speech Inspector**: Configures speech rate (WPM), pitch, output container formats (AAC, AIFF, WAV, CAF), audio channels, sample rates, bitrates, and converter quality.
-- 🎧 **Playback & Audio Export**: Preview playback with keyboard shortcuts or export audio files through the macOS save panel.
-- 🔒 **Local & Offline**: Speech synthesis and audio processing run locally. No network requests, telemetry, or third-party runtime dependencies.
+- 📄 **Direct Editor**: Start typing immediately; preview and export audio without saving first.
+- ⏱️ **Timed Text**: Supports Plain Text, LRC (line-level), and Enhanced LRC (word-level) with automatic rate scaling.
+- 🗣️ **System & Personal Voices**: Filter installed macOS voices by language; use Spoken Content Siri voices and authorized Personal Voice profiles.
+- 🎛️ **Speech Inspector**: Tune speech rate, pitch, container formats (AAC, AIFF, WAV, CAF), channels, sample rates, and bitrates.
+- 🎧 **Preview & Export**: Fast keyboard preview playback and standard save panel audio export.
+- 🔒 **Local & Private**: On-device synthesis with zero network calls, telemetry, or external runtime dependencies.
 
 ---
 
@@ -43,13 +41,11 @@ Speech synthesis runs locally using macOS system components without external net
 
 ### Homebrew (Recommended)
 
-Install Apple Say via the [thedavidweng/homebrew-tap](https://github.com/thedavidweng/homebrew-tap):
-
 ```bash
 brew install --cask thedavidweng/tap/apple-say
 ```
 
-To update in the future:
+Upgrade:
 
 ```bash
 brew upgrade --cask apple-say
@@ -57,31 +53,32 @@ brew upgrade --cask apple-say
 
 ### Direct Download
 
-1. Download the latest `Apple-Say.dmg` from the [GitHub Releases](https://github.com/thedavidweng/apple-say/releases) page.
-2. Open the disk image and drag **Apple Say.app** to your `/Applications` folder.
-3. Launch Apple Say from Applications or Spotlight.
+1. Download `Apple-Say.dmg` from [GitHub Releases](https://github.com/thedavidweng/apple-say/releases).
+2. Drag **Apple Say.app** into `/Applications`.
+3. Launch from Applications or Spotlight.
 
 > [!NOTE]
-> Pre-built releases are currently ad-hoc signed. If macOS Gatekeeper displays a security notice on first launch, right-click **Apple Say.app**, select **Open**, and confirm; or run `xattr -cr "/Applications/Apple Say.app"` in Terminal.
+> Releases use ad-hoc signing. If Gatekeeper blocks launch, right-click **Apple Say.app** and select **Open**, or run:
+> `xattr -cr "/Applications/Apple Say.app"`
 
 ---
 
 ## 📖 Supported Formats
 
-Apple Say automatically identifies the document format based on its syntax:
+Document formats are detected automatically:
 
-- **Plain Text**: Standard UTF-8 plain text for continuous speech synthesis.
-- **LRC**: Line-level synchronized text with line timestamps:
+- **Plain Text**: Continuous speech without timestamps.
+- **LRC**: Line-level timestamps:
   ```lrc
   [00:02.00] Hello, welcome to Apple Say.
-  [00:05.50] This is line-level synchronized speech.
+  [00:05.50] Line-level synchronized speech.
   ```
-- **Enhanced LRC**: Word- or fragment-level synchronized text with inline timestamps:
+- **Enhanced LRC**: Word-level inline timestamps:
   ```lrc
   [00:01.00] <00:01.20> Precision <00:02.00> word-level <00:02.80> alignment.
   ```
 
-If syntax errors or conflicting timestamps are detected, the editor treats the content safely as Plain Text or notifies you with a timing error.
+Timing or syntax conflicts safely fall back to Plain Text or report a Timing Error without modifying document text.
 
 ---
 
@@ -100,52 +97,47 @@ If syntax errors or conflicting timestamps are detected, the editor treats the c
 
 ### Prerequisites
 
-- macOS 14.0 (Sonoma) or later
-- Xcode 26 or later, including the Swift 6 toolchain and Icon Composer build tools
+- macOS 14.0+
+- Xcode 26+ (Swift 6 toolchain and Icon Composer)
 
-### Build Instructions
+### Build & Run
 
 ```bash
-# Clone the repository
 git clone https://github.com/thedavidweng/apple-say.git
 cd apple-say
 
-# Build the standalone application bundle
+# Build application bundle
 ./scripts/build-app.sh
 
-# Launch the built app
+# Launch app
 open "build/Apple Say.app"
 ```
 
-### Running Tests
+### Test & Package
 
 ```bash
+# Run tests
 swift test
-```
 
-### Packaging Release Assets
-
-```bash
+# Build release artifacts in dist/
 ./scripts/package-release.sh
 ```
-
-Artifacts (`Apple-Say.dmg`, `Apple-Say.zip`, and `checksums.txt`) will be generated inside the `dist/` directory.
 
 ---
 
 ## 🛡️ Privacy & Permissions
 
-Apple Say does not collect, store, transmit, or share any personal data.
+Apple Say collects, stores, and transmits zero personal data.
 
-- **System Speech**: Speech rendering is handled locally via native macOS APIs.
-- **Personal Voice**: When selecting a macOS Personal Voice, macOS will prompt you for authorization. Apple Say uses this permission exclusively to preview and export text you explicitly choose.
+- **System Speech**: Synthesized entirely on-device via native macOS APIs.
+- **Personal Voice**: Prompts for native macOS authorization on first use; used strictly for user-requested speech preview and export.
 
-For more details, see [PRIVACY.md](PRIVACY.md).
+Details in [PRIVACY.md](PRIVACY.md).
 
 ---
 
-## 📄 License & Contributing
+## 📄 Documentation & Contributing
 
-- Project specifications and terminology are documented in [CONTEXT.md](CONTEXT.md).
-- Contribution guidelines and pre-commit checks are documented in [CONTRIBUTING.md](CONTRIBUTING.md).
-- Bug reports, feature suggestions, and contributions are welcome via [GitHub Issues](https://github.com/thedavidweng/apple-say/issues).
+- Domain vocabulary and specifications: [CONTEXT.md](CONTEXT.md)
+- Contribution guidelines and pre-commit checks: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Issues and feature requests: [GitHub Issues](https://github.com/thedavidweng/apple-say/issues)

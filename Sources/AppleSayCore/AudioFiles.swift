@@ -154,11 +154,13 @@ enum AudioFiles {
             var value = UInt32(quality)
             try check(AudioConverterSetProperty(converter, kAudioConverterCodecQuality, 4, &value))
         }
-        var config: CFArray?
-        var configSize = UInt32(MemoryLayout<CFArray?>.size)
+        var config: Unmanaged<CFArray>?
+        var configSize = UInt32(MemoryLayout<Unmanaged<CFArray>?>.size)
         let status = AudioConverterGetProperty(converter, kAudioConverterPropertySettings, &configSize, &config)
-        if status == noErr {
-            try check(ExtAudioFileSetProperty(file, kExtAudioFileProperty_ConverterConfig, configSize, &config))
+        if status == noErr, let config {
+            var retained = config
+            try check(ExtAudioFileSetProperty(file, kExtAudioFileProperty_ConverterConfig, configSize, &retained))
+            config.release()
         }
     }
 
