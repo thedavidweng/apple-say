@@ -1,0 +1,51 @@
+name: Deploy site to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/site.yml"
+      - "public/screenshot.webp"
+      - "Resources/AppIcon.webp"
+  release:
+    types: [published]
+  schedule:
+    # Catches releases created by release-please (GITHUB_TOKEN events
+    # do not trigger the release event above).
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment: github-pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Assemble site with latest release version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp public/screenshot.webp site/assets/screenshot.webp
+          cp Resources/AppIcon.webp site/assets/icon.webp
+          TAG=$(gh api "repos/${{ github.repository }}/releases/latest" --jq .tag_name || git describe --tags --abbrev=0)
+          echo "Injecting version: $TAG"
+          sed -i "s/{{APP_VERSION}}/${TAG#v}/g" site/index.html site/zh/index.html
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - uses: actions/deploy-pages@v4
