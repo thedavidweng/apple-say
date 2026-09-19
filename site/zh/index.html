@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Apple Say - 文字，开口成声。</title>
-<meta name="description" content="Apple Say 是专为 macOS 打造的原生语音合成与时间轴音频工作台。基于系统内置语音引擎，支持纯文本、LRC 及增强型 LRC 的编辑、试听与导出——完全本地离线，无需订阅。" />
+<meta name="description" content="Apple Say 是一款原生 macOS 语音合成与时间轴文本应用。使用系统声音编辑、试听和导出纯文本、LRC 及增强型 LRC。完全本地且免费。" />
 <meta name="color-scheme" content="light dark" />
 <link rel="icon" type="image/png" href="../assets/favicon.png" />
 <link rel="stylesheet" href="../assets/site.css" />
@@ -13,11 +13,17 @@
 <link rel="alternate" hreflang="zh-Hans" href="https://thedavidweng.github.io/apple-say/zh/" />
 <link rel="alternate" hreflang="x-default" href="https://thedavidweng.github.io/apple-say/" />
 <meta property="og:type" content="website" />
-<meta property="og:title" content="Apple Say - 文字，开口成声。" />
-<meta property="og:description" content="专为 macOS 打造的原生语音合成与时间轴音频工作台。完全本地离线，无需订阅。" />
+<meta property="og:title" content="Apple Say" />
 <meta property="og:url" content="https://thedavidweng.github.io/apple-say/zh/" />
-<meta property="og:image" content="https://thedavidweng.github.io/apple-say/assets/screenshot.webp" />
+<meta property="og:image" content="https://thedavidweng.github.io/apple-say/assets/og-image.jpg" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="1672" />
+<meta property="og:image:height" content="941" />
+<meta property="og:image:alt" content="Apple Say 在 MacBook 与 iPad 上运行" />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Apple Say" />
+<meta name="twitter:image" content="https://thedavidweng.github.io/apple-say/assets/og-image.jpg" />
+<meta name="twitter:image:alt" content="Apple Say 在 MacBook 与 iPad 上运行" />
 </head>
 <body>
 
@@ -57,7 +63,7 @@
     <img class="hero-icon" src="../assets/icon.webp" width="128" height="128" alt="Apple Say 应用图标" />
     <p class="hero-name">Apple Say</p>
     <h1 class="mega">文字，开口成声。</h1>
-    <p class="hero-desc">Apple Say 是专为 macOS 打造的原生语音合成与时间轴音频工作台。基于系统内置语音引擎，支持纯文本、LRC 及增强型 LRC 的编辑、试听与导出——完全本地离线，无需订阅。</p>
+    <p class="hero-desc">Apple Say 是一款原生 macOS 语音合成与时间轴文本应用。使用系统声音编辑、试听和导出纯文本、LRC 及增强型 LRC。完全本地且免费。</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="https://github.com/thedavidweng/apple-say/releases/latest">下载 Mac 版</a>
       <a class="btn btn-ghost" href="https://github.com/thedavidweng/apple-say/blob/main/README_zh.md">了解更多</a>
@@ -70,20 +76,20 @@
 <section class="section" id="timed-text">
   <div class="inner">
     <h2 class="display-lg">每一行，每一字，都准时。</h2>
-    <p class="lead">行级 LRC 与字词级增强型 LRC，按时间戳自适应调节语速。</p>
-    <p class="copy">时间戳只会被遵守，绝不被移动。当语音无法匹配时间轴时，Apple Say 会报告时序错误，而不是擅自修改你的文本。</p>
+    <p class="lead">行级 LRC 与逐字增强型 LRC，自动适配语速。</p>
+    <p class="copy">时间戳保持不变。语音无法匹配时，Apple Say 会报告时序错误。</p>
     <div class="code-block" aria-label="增强型 LRC 示例"><span class="t">[00:02.00]</span> 你好，欢迎使用 Apple Say。
 <span class="t">[00:05.50]</span> &lt;<span class="t">00:05.70</span>&gt; 行级 &lt;<span class="t">00:06.40</span>&gt; 对齐，&lt;<span class="t">00:07.30</span>&gt; 逐字呈现。</div>
-    <p class="more chevron"><a href="https://github.com/thedavidweng/apple-say/blob/main/README_zh.md">了解支持的文档格式</a></p>
+    <p class="more chevron"><a href="https://github.com/thedavidweng/apple-say/blob/main/README_zh.md">支持的文档格式</a></p>
   </div>
 </section>
 
 <!-- Voices -->
 <section class="section" id="voices">
   <div class="inner">
-    <h2 class="display-lg">Mac 上的声音，尽归你用。</h2>
+    <h2 class="display-lg">使用 Mac 上的声音。</h2>
     <p class="lead">系统声音、Siri 自然语音，以及经你授权的个人声音。</p>
-    <p class="copy">按语言筛选已安装的 macOS 语音，在语音检查器中微调语速与音高。选择系统声音时，将完整沿用 macOS 朗读内容设置——包括系统通过默认语音通道提供的 Siri 自然语音。</p>
+    <p class="copy">按语言筛选已安装的声音，在语音检查器中调整语速和音高。系统声音会保留 macOS 朗读内容设置，包括可用的 Siri 自然语音。</p>
     <p class="more chevron"><a href="https://github.com/thedavidweng/apple-say/blob/main/docs/personal-voice.md">了解个人声音</a></p>
   </div>
 </section>
@@ -91,31 +97,31 @@
 <!-- Features -->
 <section class="section" id="features">
   <div class="inner">
-    <h2 class="display-md">让文字发声所需的一切。</h2>
+    <h2 class="display-md">写作、试听、导出。</h2>
     <div class="grid">
       <div class="card">
         <h3>即开即写</h3>
-        <p>启动即进入编辑态，免存盘直接试听与导出。</p>
+        <p>打开即写。无需先保存即可试听和导出。</p>
       </div>
       <div class="card">
         <h3>自适应对齐</h3>
-        <p>自动识别纯文本、LRC 与增强型 LRC，无需手动切换模式。</p>
+        <p>自动识别纯文本、LRC 和增强型 LRC。无需切换模式。</p>
       </div>
       <div class="card">
         <h3>语音检查器</h3>
-        <p>语速、音高与导出格式(AAC、AIFF、WAV、CAF)，声道、采样率、比特率尽在掌握。</p>
+        <p>调整语速和音高。导出 AAC、AIFF、WAV 或 CAF，并设置声道、采样率和比特率。</p>
       </div>
       <div class="card">
         <h3>快捷试听与导出</h3>
-        <p><kbd>⌘ Return</kbd> 试听，<kbd>⌘ .</kbd> 停止，<kbd>⇧ ⌘ E</kbd> 通过原生存储面板导出。</p>
+        <p><kbd>⌘ Return</kbd> 试听，<kbd>⌘ .</kbd> 停止，<kbd>⇧ ⌘ E</kbd> 导出。</p>
       </div>
       <div class="card">
         <h3>系统与个人声音</h3>
-        <p>调用 macOS 为 <span style="font-family:var(--font-mono)">say</span> 提供的任意声音，包括经你授权的个人声音。</p>
+        <p>使用 macOS 提供的系统声音和经授权的个人声音。</p>
       </div>
       <div class="card">
         <h3>本地离线隐私</h3>
-        <p>本地完成合成，零埋点、零网络通信、零第三方运行时依赖。</p>
+        <p>语音在本机合成。不联网，不埋点。</p>
       </div>
     </div>
   </div>
@@ -125,7 +131,7 @@
 <section class="section" id="download">
   <div class="inner">
     <h2 class="display-lg">获取 Apple Say。</h2>
-    <p class="copy">通过 Homebrew 安装，或从 GitHub Releases 下载 DMG 并拖入应用程序文件夹。</p>
+    <p class="copy">使用 Homebrew 安装，或下载 DMG 并将 Apple Say 移入应用程序。</p>
     <p><code class="brew">brew install --cask thedavidweng/tap/apple-say</code></p>
     <div class="cta-row" style="margin-top:32px">
       <a class="btn btn-primary" href="https://github.com/thedavidweng/apple-say/releases/latest">下载 DMG</a>
