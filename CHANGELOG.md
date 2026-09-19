@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.0](https://github.com/thedavidweng/apple-say/compare/v1.1.0...v1.2.0) (2026-09-19)
+
+
+### ✨ Features
+
+* **editor:** integrate macOS Writing Tools ([8e9d123](https://github.com/thedavidweng/apple-say/commit/8e9d123017220eae550553a22ff0e6481852eb94))
+
+
+### 🐛 Bug Fixes
+
+* **voice:** clarify voice labels ([0544795](https://github.com/thedavidweng/apple-say/commit/05447958283abd5184a545d4b378f4167b14ee55))
+
+
+### ♻️ Refactoring
+
+* simplify codebase and eliminate over-engineering ([57145d2](https://github.com/thedavidweng/apple-say/commit/57145d299a6080e4c41dc62bf02a7fa0a0dcb24c))
+
+
+### 📝 Documentation
+
+* add site source and Pages deploy workflow ([789a3d9](https://github.com/thedavidweng/apple-say/commit/789a3d9ea29a92c1e1d7d855644a7e6c691f1ea9))
+* fold glass research into ADR-0001 ([d54a9aa](https://github.com/thedavidweng/apple-say/commit/d54a9aaa7bd5e69ab5d1434f72fd62503ab46be4)), closes [#16](https://github.com/thedavidweng/apple-say/issues/16)
+* switch images to webp ([7f8a661](https://github.com/thedavidweng/apple-say/commit/7f8a661ab56545707c3c30f63ad0ff5668a0c01a))
+
 ## [1.1.0](https://github.com/thedavidweng/apple-say/compare/v1.0.0...v1.1.0) (2026-09-14)
 
 
