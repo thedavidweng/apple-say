@@ -45,7 +45,7 @@ jobs:
           sed -i "s/{{APP_VERSION}}/${TAG#v}/g" site/index.html site/zh/index.html
 
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site
       - uses: actions/deploy-pages@v5
