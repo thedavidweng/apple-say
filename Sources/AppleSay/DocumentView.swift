@@ -85,7 +85,9 @@ private struct DocumentTextEditor: NSViewRepresentable {
         // NSTextView does not consistently perform its advertised automatic
         // insertion, so install AppKit's own standard Writing Tools submenu.
         menu.automaticallyInsertsWritingToolsItems = false
-        menu.insertItem(writingToolsItem.copy() as! NSMenuItem, at: 0)
+        if let copiedItem = writingToolsItem.copy() as? NSMenuItem {
+            menu.insertItem(copiedItem, at: 0)
+        }
         menu.insertItem(.separator(), at: 1)
     }
 
