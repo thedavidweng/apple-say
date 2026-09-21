@@ -49,9 +49,15 @@ public struct DocumentTranslationPlan: Sendable {
         return result as String
     }
 
-    private static let lrcContent = try! NSRegularExpression(
-        pattern: #"(?m)^[ \t]*(?:\[[0-9]+:[0-5][0-9](?:\.[0-9]{1,3})?\])+([^\r\n]*)"#
-    )
+    private static let lrcContent: NSRegularExpression = {
+        do {
+            return try NSRegularExpression(
+                pattern: #"(?m)^[ \t]*(?:\[[0-9]+:[0-5][0-9](?:\.[0-9]{1,3})?\])+([^\r\n]*)"#
+            )
+        } catch {
+            preconditionFailure("invalid lrcContent regex: \(error)")
+        }
+    }()
 }
 
 public enum TimedTextMarkup {
@@ -64,7 +70,13 @@ public enum TimedTextMarkup {
         }
     }
 
-    private static let markup = try! NSRegularExpression(
-        pattern: #"\[[0-9]+:[0-5][0-9](?:\.[0-9]{1,3})?\]|<[0-9]+:[0-5][0-9](?:\.[0-9]{1,3})?>|\[(?:ar|al|ti|au|by|re|ve|length|offset):[^\[\]\r\n]*\]"#
-    )
+    private static let markup: NSRegularExpression = {
+        do {
+            return try NSRegularExpression(
+                pattern: #"\[[0-9]+:[0-5][0-9](?:\.[0-9]{1,3})?\]|<[0-9]+:[0-5][0-9](?:\.[0-9]{1,3})?>|\[(?:ar|al|ti|au|by|re|ve|length|offset):[^\[\]\r\n]*\]"#
+            )
+        } catch {
+            preconditionFailure("invalid markup regex: \(error)")
+        }
+    }()
 }
