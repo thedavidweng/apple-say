@@ -93,18 +93,15 @@ struct SpeechInspector: View {
                         }
                     }
                 }
-                Slider(value: Binding(
-                    get: { Double(settings.speed) }, set: { settings.speed = Int($0.rounded()) }
-                ), in: Double(speech.capabilities.speedRange.lowerBound)...Double(speech.capabilities.speedRange.upperBound))
+                Slider(
+                    value: $settings.sliderSpeed,
+                    in: Double(speech.capabilities.speedRange.lowerBound)...Double(speech.capabilities.speedRange.upperBound)
+                )
                 .accessibilityLabel(strings.text("Speech Speed", "语速"))
                 .accessibilityValue(strings.text("\(settings.speed) words per minute", "每分钟 \(settings.speed) 字"))
-                Toggle(strings.text("Natural Pitch", "自然音高"), isOn: Binding(
-                    get: { settings.pitch == nil }, set: { settings.pitch = $0 ? nil : 50 }
-                ))
+                Toggle(strings.text("Natural Pitch", "自然音高"), isOn: $settings.usesNaturalPitch)
                 if settings.pitch != nil {
-                    TextField(strings.text("Pitch (Hz)", "音高（Hz）"), value: Binding(
-                        get: { settings.pitch ?? 50 }, set: { settings.pitch = $0 }
-                    ), format: .number)
+                    TextField(strings.text("Pitch (Hz)", "音高（Hz）"), value: $settings.customPitch, format: .number)
                     .accessibilityLabel(strings.text("Pitch in hertz", "音高赫兹数"))
                 }
                 Button(strings.text("Reset Speed and Pitch", "重置语速和音高")) {
@@ -250,10 +247,7 @@ struct SpeechInspector: View {
             }
         }
         if speech.capabilities.supportsNetworkAudio {
-            TextField(strings.text("Network Audio Service", "网络音频服务"), text: Binding(
-                get: { settings.networkService ?? "" },
-                set: { settings.networkService = $0.isEmpty ? nil : $0 }
-            ))
+            TextField(strings.text("Network Audio Service", "网络音频服务"), text: $settings.networkServiceName)
             .help(strings.text(
                 "The name of an available system network audio service.",
                 "可用系统网络音频服务的名称。"
@@ -293,6 +287,25 @@ struct SpeechInspector: View {
         SystemSpeech.currentSystemVoice(
             preferredLanguages: language.isEmpty ? Locale.preferredLanguages : [language]
         )
+    }
+}
+
+private extension SpeechSettings {
+    var sliderSpeed: Double {
+        get { Double(speed) }
+        set { speed = Int(newValue.rounded()) }
+    }
+    var usesNaturalPitch: Bool {
+        get { pitch == nil }
+        set { pitch = newValue ? nil : 50 }
+    }
+    var customPitch: Double {
+        get { pitch ?? 50 }
+        set { pitch = newValue }
+    }
+    var networkServiceName: String {
+        get { networkService ?? "" }
+        set { networkService = newValue.isEmpty ? nil : newValue }
     }
 }
 

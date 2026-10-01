@@ -139,71 +139,43 @@ private struct DocumentTextEditor: NSViewRepresentable {
 }
 
 struct DocumentView: View {
-    @State private var text = ""
-    @State private var fileURL: URL?
+    @State private var session = DocumentSession()
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(AppLanguagePreference.defaultsKey) private var languagePreference = AppLanguagePreference.system.rawValue
     @AppStorage("hasShownWelcomeDocument") private var hasShownWelcomeDocument = false
-    @State private var speech = SpeechController(system: SystemSpeech())
-    @State private var settings = SpeechSettings()
-    @State private var output = ExportSettings()
-    @State private var inspectorPresented = true
     @State private var language = ""
     @State private var hasInitializedLanguage = false
-    @State private var errorMessage: String?
     @State private var showPersonalVoiceSettingsGuidance = false
     @State private var refreshing = false
     @State private var requestedReplacement: String?
     @State private var translationSuggestion: TranslationSuggestion?
     @State private var translationRequest: TranslationRequest?
     @State private var translationProposal: TranslationProposal?
-    @State private var dismissedTranslationTarget: String?
     @State private var translating = false
-    @State private var writingToolsActive = false
     @State private var composingText = false
 
-    init(text: String = "", fileURL: URL? = nil) {
-        _text = State(initialValue: text)
-        _fileURL = State(initialValue: fileURL)
-    }
-
     private var strings: AppStrings { AppStrings(preferenceRawValue: languagePreference) }
-    private var busy: Bool { speech.state.isActive }
-
-    private var hasText: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-    private var selectedVoiceAvailable: Bool {
-        settings.voice.map { selected in speech.voices.contains { $0.id == selected.id } } ?? true
+    private var speech: SpeechController { session.speech }
+    private var busy: Bool { session.busy }
+    private var isWelcomePromptActive: Bool {
+        session.fileURL == nil && session.text == strings.welcomeText && !busy
     }
-    private var canPreview: Bool {
-        hasText && !busy && !writingToolsActive && selectedVoiceAvailable && !speech.voices.isEmpty
-    }
-    private var canExport: Bool { canPreview && !speech.capabilities.outputs.isEmpty }
-    private var isWelcomePromptActive: Bool { fileURL == nil && text == strings.welcomeText && !busy }
-    private var translationTargetIdentifier: String { settings.voice?.language ?? language }
+    private var translationTargetIdentifier: String { session.settings.voice?.language ?? language }
 
     var body: some View {
         documentCanvas
         .frame(minWidth: 480, minHeight: 360)
-        .navigationTitle(fileURL?.lastPathComponent ?? strings.text("Untitled", "未命名"))
-        .inspector(isPresented: $inspectorPresented) {
+        .navigationTitle(session.fileURL?.lastPathComponent ?? strings.text("Untitled", "未命名"))
+        .inspector(isPresented: $session.inspectorPresented) {
             SpeechInspector(
-                speech: speech, settings: $settings, output: $output, language: $language,
+                speech: speech, settings: $session.settings, output: $session.output, language: $language,
                 strings: strings, authorize: authorize
             )
             .inspectorColumnWidth(min: 270, ideal: 300, max: 360)
             .disabled(busy || (refreshing && speech.voices.isEmpty))
         }
         .toolbar { speechToolbar }
-        .focusedSceneValue(\.speechActions, SpeechActions(
-            preview: preview, stop: speech.stop, export: export,
-            toggleInspector: { inspectorPresented.toggle() },
-            canPreview: canPreview, canStop: busy, canExport: canExport
-        ))
-        .focusedSceneValue(\.documentFileActions, DocumentFileActions(
-            newDocument: newDocument,
-            openDocument: openFile,
-            saveDocument: saveFile
-        ))
+        .focusedSceneValue(session)
         .task {
             prepareWelcomeDocument()
             await refresh()
@@ -215,24 +187,24 @@ struct DocumentView: View {
             Task { await refresh() }
         }
         .onOpenURL { url in
-            loadFile(from: url)
+            session.loadFile(from: url)
         }
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             guard let provider = providers.first else { return false }
             _ = provider.loadObject(ofClass: URL.self) { url, _ in
                 guard let url else { return }
                 Task { @MainActor in
-                    loadFile(from: url)
+                    session.loadFile(from: url)
                 }
             }
             return true
         }
         .onDisappear { speech.stop() }
         .task(id: TranslationDetectionInput(
-            document: text,
+            document: session.text,
             targetIdentifier: translationTargetIdentifier,
-            dismissedTargetIdentifier: dismissedTranslationTarget,
-            writingToolsActive: writingToolsActive
+            dismissedTargetIdentifier: session.dismissedTranslationTarget,
+            writingToolsActive: session.writingToolsActive
         )) {
             await detectTranslationNeed()
         }
@@ -248,11 +220,9 @@ struct DocumentView: View {
                 }
             )
         }
-        .alert("Apple Say", isPresented: Binding(
-            get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } }
-        )) {
-            Button(strings.text("OK", "好"), role: .cancel) { errorMessage = nil }
-        } message: { Text(errorMessage ?? "") }
+        .alert("Apple Say", isPresented: $session.showsError) {
+            Button(strings.text("OK", "好"), role: .cancel) {}
+        } message: { Text(session.errorMessage ?? "") }
         .alert(strings.text("Allow Personal Voice", "允许个人声音"),
                isPresented: $showPersonalVoiceSettingsGuidance) {
             Button(strings.text("Cancel", "取消"), role: .cancel) {}
@@ -270,7 +240,7 @@ struct DocumentView: View {
     private var documentCanvas: some View {
         VStack(spacing: 0) {
             documentEditor
-            if let translationSuggestion, !writingToolsActive {
+            if let translationSuggestion, !session.writingToolsActive {
                 Divider()
                 translationBanner(translationSuggestion)
             }
@@ -282,9 +252,9 @@ struct DocumentView: View {
     private var documentEditor: some View {
         ZStack(alignment: .topLeading) {
             DocumentTextEditor(
-                text: $text,
+                text: $session.text,
                 requestedReplacement: $requestedReplacement,
-                writingToolsActive: $writingToolsActive,
+                writingToolsActive: $session.writingToolsActive,
                 composingText: $composingText,
                 accessibilityLabel: strings.text("Document text", "文稿文本"),
                 accessibilityHelp: strings.text(
@@ -292,7 +262,7 @@ struct DocumentView: View {
                     "输入纯文本、LRC 或增强型 LRC 后即可播放。"
                 )
             )
-            if text.isEmpty && !composingText {
+            if session.text.isEmpty && !composingText {
                 Text(strings.text("Enter text to speak…", "输入要朗读的文本…"))
                     .font(.system(size: 16))
                     .foregroundStyle(Color(nsColor: .placeholderTextColor))
@@ -323,12 +293,12 @@ struct DocumentView: View {
                 translationRequest = TranslationRequest(
                     source: suggestion.source,
                     target: suggestion.target,
-                    document: text
+                    document: session.text
                 )
             }
-            .disabled(translating || busy || writingToolsActive)
+            .disabled(translating || busy || session.writingToolsActive)
             Button {
-                dismissedTranslationTarget = translationTargetIdentifier
+                session.dismissedTranslationTarget = translationTargetIdentifier
                 translationSuggestion = nil
             } label: {
                 Image(systemName: "xmark")
@@ -351,8 +321,8 @@ struct DocumentView: View {
                     self.translationRequest = nil
                     switch result {
                     case .success(let translated):
-                        guard text == translationRequest.document else {
-                            errorMessage = strings.text(
+                        guard session.text == translationRequest.document else {
+                            session.errorMessage = strings.text(
                                 "The Document changed while it was being translated. Try again with the current text.",
                                 "翻译期间文稿已发生变化。请使用当前文本重试。"
                             )
@@ -366,7 +336,7 @@ struct DocumentView: View {
                             targetName: targetName
                         )
                     case .failure(let error):
-                        errorMessage = error.localizedDescription
+                        session.errorMessage = error.localizedDescription
                     }
                 }
             }
@@ -401,7 +371,7 @@ struct DocumentView: View {
     }
 
     @ViewBuilder private var playButton: some View {
-        Button(action: preview) {
+        Button(action: session.preview) {
             Label {
                 Text(strings.text("Preview", "播放"))
             } icon: {
@@ -409,7 +379,7 @@ struct DocumentView: View {
                     .symbolEffect(.pulse, options: .repeating, isActive: isWelcomePromptActive)
             }
         }
-        .disabled(!canPreview)
+        .disabled(!session.canPreview)
         .help(playButtonHelp)
     }
 
@@ -420,13 +390,15 @@ struct DocumentView: View {
     }
 
     private var exportButton: some View {
-        Button(action: export) { Label(strings.text("Export", "导出"), systemImage: "square.and.arrow.up") }
-            .disabled(!canExport)
-            .help(strings.text("Export Audio (⇧⌘E)", "导出音频（⇧⌘E）"))
+        Button { session.export(strings) } label: {
+            Label(strings.text("Export", "导出"), systemImage: "square.and.arrow.up")
+        }
+        .disabled(!session.canExport)
+        .help(strings.text("Export Audio (⇧⌘E)", "导出音频（⇧⌘E）"))
     }
 
     private var inspectorButton: some View {
-        Button { inspectorPresented.toggle() } label: {
+        Button { session.inspectorPresented.toggle() } label: {
             Label(strings.text("Speech Inspector", "语音检查器"), systemImage: "sidebar.right")
         }
         .help(strings.text("Show or hide Speech Inspector (⌥⌘I)", "显示或隐藏语音检查器（⌥⌘I）"))
@@ -453,7 +425,7 @@ struct DocumentView: View {
     }
 
     private var formatLabel: String {
-        let parsed = SpeechController.analyze(text)
+        let parsed = session.parsedDocument
         switch parsed.format {
         case .plainText: return strings.text("Plain Text", "纯文本")
         case .lrc:
@@ -479,19 +451,19 @@ struct DocumentView: View {
     @MainActor private func detectTranslationNeed() async {
         translationSuggestion = nil
         guard #available(macOS 15.0, *),
-              !writingToolsActive,
-              translationTargetIdentifier != dismissedTranslationTarget else { return }
+              !session.writingToolsActive,
+              translationTargetIdentifier != session.dismissedTranslationTarget else { return }
         do {
             try await Task.sleep(for: .milliseconds(600))
             try Task.checkCancellation()
             translationSuggestion = await NativeLanguageFeatures.translationSuggestion(
-                for: text,
+                for: session.text,
                 targetIdentifier: translationTargetIdentifier,
                 displayLocale: strings.locale
             )
         } catch is CancellationError {
         } catch {
-            errorMessage = error.localizedDescription
+            session.errorMessage = error.localizedDescription
         }
     }
 
@@ -502,75 +474,27 @@ struct DocumentView: View {
         do {
             try await speech.refresh()
             if !hasInitializedLanguage {
-                settings.voice = nil
+                session.settings.voice = nil
                 language = ""
                 hasInitializedLanguage = true
             }
-            if let voice = settings.voice, !speech.voices.contains(where: { $0.id == voice.id }) {
-                errorMessage = strings.text(
+            if let voice = session.settings.voice, !speech.voices.contains(where: { $0.id == voice.id }) {
+                session.errorMessage = strings.text(
                     "The selected Voice is no longer available. Choose a Voice before continuing.",
                     "所选声音已不可用。请先选择其他声音。"
                 )
             }
-            if !speech.capabilities.outputs.contains(where: { $0.container == output.container }),
+            if !speech.capabilities.outputs.contains(where: { $0.container == session.output.container }),
                let first = speech.capabilities.outputs.first {
-                output = ExportSettings(container: first.container)
+                session.output = ExportSettings(container: first.container)
             }
-        } catch { errorMessage = error.localizedDescription }
+        } catch { session.errorMessage = error.localizedDescription }
     }
 
     private func prepareWelcomeDocument() {
-        guard fileURL == nil, text.isEmpty, !hasShownWelcomeDocument else { return }
-        text = strings.welcomeText
+        guard session.fileURL == nil, session.text.isEmpty, !hasShownWelcomeDocument else { return }
+        session.text = strings.welcomeText
         hasShownWelcomeDocument = true
-    }
-
-    private func newDocument() {
-        text = ""
-        fileURL = nil
-        dismissedTranslationTarget = nil
-    }
-
-    private func openFile() {
-        let panel = NSOpenPanel()
-        panel.title = strings.text("Open Document", "打开文稿")
-        panel.allowedContentTypes = [.plainText, .lrc]
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        guard let window = NSApp.keyWindow else { return }
-        panel.beginSheetModal(for: window) { response in
-            guard response == .OK, let url = panel.url else { return }
-            loadFile(from: url)
-        }
-    }
-
-    private func loadFile(from url: URL) {
-        do {
-            let content = try String(contentsOf: url, encoding: .utf8)
-            text = content
-            fileURL = url
-            dismissedTranslationTarget = nil
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    private func saveFile() {
-        let panel = NSSavePanel()
-        panel.title = strings.text("Save Document", "存储文稿")
-        panel.nameFieldStringValue = fileURL?.lastPathComponent ?? (strings.text("Untitled", "未命名") + ".txt")
-        panel.allowedContentTypes = [.plainText, .lrc]
-        panel.canCreateDirectories = true
-        guard let window = NSApp.keyWindow else { return }
-        panel.beginSheetModal(for: window) { response in
-            guard response == .OK, let url = panel.url else { return }
-            do {
-                try text.write(to: url, atomically: true, encoding: .utf8)
-                fileURL = url
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
     }
 
     private func authorize() {
@@ -578,41 +502,7 @@ struct DocumentView: View {
             do {
                 try await speech.authorizePersonalVoice()
                 showPersonalVoiceSettingsGuidance = speech.authorization == .denied
-            } catch { errorMessage = error.localizedDescription }
-        }
-    }
-
-    private func preview() {
-        Task {
-            do {
-                try await speech.preview(text: text, settings: settings)
-            } catch is CancellationError {
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
-    }
-
-    private func export() {
-        let panel = NSSavePanel()
-        panel.title = strings.text("Export Audio", "导出音频")
-        panel.prompt = strings.text("Export", "导出")
-        panel.nameFieldStringValue = (fileURL?.deletingPathExtension().lastPathComponent
-            ?? strings.text("Untitled", "未命名")) + "." + output.container.rawValue
-        panel.allowedContentTypes = [UTType(filenameExtension: output.container.rawValue)!]
-        panel.canCreateDirectories = true
-        panel.isExtensionHidden = false
-        guard let window = NSApp.keyWindow else { return }
-        panel.beginSheetModal(for: window) { response in
-            guard response == .OK, let url = panel.url else { return }
-            Task { @MainActor in
-                do {
-                    try await speech.export(text: text, settings: settings, output: output, to: url)
-                } catch is CancellationError {
-                } catch {
-                    errorMessage = error.localizedDescription
-                }
-            }
+            } catch { session.errorMessage = error.localizedDescription }
         }
     }
 }
