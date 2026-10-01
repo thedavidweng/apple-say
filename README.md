@@ -141,3 +141,4 @@ Details in [PRIVACY.md](PRIVACY.md).
 - Domain vocabulary and specifications: [CONTEXT.md](CONTEXT.md)
 - Contribution guidelines and pre-commit checks: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Issues and feature requests: [GitHub Issues](https://github.com/thedavidweng/apple-say/issues)
+- License: [Apache-2.0](LICENSE)

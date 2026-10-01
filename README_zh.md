@@ -141,3 +141,4 @@ Apple Say 绝不收集、存储、上传或共享任何个人数据。
 - 领域术语与设计规范：[CONTEXT.md](CONTEXT.md)
 - 贡献指南与提交前检查：[CONTRIBUTING.md](CONTRIBUTING.md)
 - 问题反馈与功能建议：[GitHub Issues](https://github.com/thedavidweng/apple-say/issues)
+- 许可证：[Apache-2.0](LICENSE)
