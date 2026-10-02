@@ -4,3 +4,7 @@ build/
 dist/
 .DS_Store
 *.xcuserstate
+
+# Website assets copied in by the Pages workflow
+/site/assets/icon.webp
+/site/assets/screenshot*.webp

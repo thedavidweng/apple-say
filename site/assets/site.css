@@ -160,28 +160,81 @@ a:hover { text-decoration: underline; }
   margin-top: 14px;
 }
 
-/* ——— Hero: floating screenshot, icon, name, mega headline ——— */
-.hero { padding: 56px 24px 96px; text-align: center; overflow: clip; }
-.hero-shot {
-  display: block; margin: 0 auto; width: 100%; height: auto; max-width: 640px;
-  /* alpha window capture floats directly on the canvas — no frame, no CSS shadow */
-  /* on load, the shot starts near full-screen and settles to its resting size */
-  animation: hero-shrink 1.8s cubic-bezier(0.28, 0.11, 0.32, 1) 0.1s both;
+/* ——— Hero: a dark stage in both schemes, matching the dark-mode capture ——— */
+.hero {
+  --fg: #f5f5f7; --fg-secondary: #a1a1a6; --link: #2997ff;
+  position: relative; overflow: clip;
+  padding: 40px 24px 96px; text-align: center;
+  background: #000000; color: var(--fg); color-scheme: dark;
 }
-@keyframes hero-shrink {
-  from { max-width: 1440px; }
-  to { max-width: 640px; }
+.hero .muted { color: #86868b; }
+/* The stage keeps the capture's aspect ratio, and the intro line is placed in
+   percentages of it so it lands exactly on the captured editor text. */
+.hero-stage-wrap {
+  width: min(1080px, 100%, max(560px, (100svh - 380px) * 1.385));
+  margin: 0 auto; perspective: 1800px;
 }
-.hero-meta { animation: hero-fade 0.9s ease-out 0.55s both; }
-@keyframes hero-fade {
-  from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: none; }
+/* The camera pivots on the editor line so its close-up keeps the line centered. */
+.hero-camera { transform-style: preserve-3d; transform-origin: 19.2% 17.8%; }
+.hero-stage { position: relative; aspect-ratio: 2138 / 1544; container-type: inline-size; }
+/* alpha window capture floats directly on the canvas — no frame, no CSS shadow */
+.hero-shot { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero-sheen {
+  position: absolute; inset: 4.92% 5.24% 9.59%;
+  border-radius: 3.2cqw; overflow: hidden; pointer-events: none; opacity: 0;
+}
+.hero-sheen::after {
+  content: ""; position: absolute; inset: -20% -60%;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.14) 50%, transparent 60%);
+  transform: translateX(-60%);
+}
+/* Intro: the editor's line is spoken word by word over a live waveform. It is
+   laid out at twice the capture's 2138px width and scaled down by site.js
+   (--k), because small font sizes switch SF to wider text metrics. */
+.hero-line {
+  position: absolute; left: 7.153%; top: 13.56%;
+  font-family: system-ui, sans-serif; font-size: 67.25px; font-weight: 500;
+  line-height: 1.2; letter-spacing: 0; white-space: nowrap;
+  color: #ffffff; opacity: 0; transform-origin: 0 0; transform: scale(var(--k));
+}
+.hero-line .w { display: inline-block; color: rgba(255, 255, 255, 0.3); }
+.hero-wave {
+  position: absolute; left: 7.25%; width: 23.95%; top: 17.4%; height: 5.6%;
+  display: flex; align-items: center; justify-content: space-between; opacity: 0;
+}
+.hero-wave i {
+  width: 0.16cqw; height: 100%; border-radius: 0.08cqw;
+  background: var(--c); box-shadow: 0 0 0.4cqw var(--c); transform: scaleY(0.06);
+}
+.hero-ping {
+  position: absolute; left: 80.31%; top: 8.29%; width: 7cqw; height: 7cqw;
+  margin: -3.5cqw 0 0 -3.5cqw; border-radius: 50%; opacity: 0; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(41, 151, 255, 0.55), rgba(191, 90, 242, 0.25) 60%, transparent);
+  box-shadow: 0 0 0 0.3cqw #2997ff, 0 0 3cqw 0.6cqw rgba(41, 151, 255, 0.6);
+}
+.hero-replay {
+  position: absolute; right: 24px; bottom: 24px; width: 36px; height: 36px;
+  display: grid; place-items: center; border: none; border-radius: 50%; cursor: pointer;
+  background: rgba(255, 255, 255, 0.14); color: #f5f5f7;
+}
+.hero-replay[hidden] { display: none; }
+.hero-replay:hover { background: rgba(255, 255, 255, 0.22); }
+/* Until site.js plays the intro, the shot and copy wait offstage. */
+.js .hero:not(.is-done) .hero-shot, .js .hero:not(.is-done) .hero-meta > * { opacity: 0; }
+@supports (animation-timeline: view()) {
+  .hero-stage-wrap {
+    animation: hero-recede linear both;
+    animation-timeline: view(); animation-range: exit 0% exit 80%;
+  }
+  @keyframes hero-recede { to { transform: scale(0.9) translateY(-4%); opacity: 0.35; } }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .hero-shot, .hero-meta { animation: none; }
+  .js .hero:not(.is-done) .hero-shot, .js .hero:not(.is-done) .hero-meta > * { opacity: 1; }
+  .hero-stage-wrap { animation: none; }
 }
-.hero-icon { width: 64px; height: 64px; margin-top: 40px; }
+.hero-meta { margin-top: -2%; }
+.hero-icon { width: 64px; height: 64px; }
 .hero-name {
   font-family: var(--font-display);
   font-size: 28px; font-weight: 600; line-height: 1.14; letter-spacing: 0.196px;
@@ -268,8 +321,7 @@ footer .locale { white-space: nowrap; }
   .global-nav .navlinks { display: none; }
   .sub-nav nav a:not(.btn) { display: none; }
   .section { padding: 72px 24px; }
-  .hero { padding: 48px 20px 72px; }
-  .hero-icon { margin-top: 32px; }
+  .hero { padding: 32px 20px 72px; }
 }
 @media (max-width: 640px) {
   .display-lg { font-size: 30px; }

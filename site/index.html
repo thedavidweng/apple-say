@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<script>document.documentElement.classList.add("js");</script>
 <title>Apple Say - Your words. Out loud.</title>
 <meta name="description" content="Apple Say is a native macOS app for speech synthesis and timed text. Write, preview, and export Plain Text, LRC, and Enhanced LRC with system voices. Fully local and free." />
 <meta name="color-scheme" content="light dark" />
@@ -57,8 +58,15 @@
 
 <!-- Hero -->
 <section class="hero" id="overview">
-  <img class="hero-shot" src="assets/screenshot.webp" width="2138" height="1544" fetchpriority="high"
-       alt="Apple Say main window with the text editor on the left and the Speech inspector on the right" />
+  <div class="hero-stage-wrap">
+    <div class="hero-camera">
+      <div class="hero-stage">
+        <img class="hero-shot" src="assets/screenshot.webp" onerror="this.remove()" width="2138" height="1544" fetchpriority="high"
+             alt="Apple Say main window with the text editor on the left and the Speech inspector on the right" />
+        <div class="hero-sheen" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
   <div class="hero-meta">
     <img class="hero-icon" src="assets/icon.webp" width="128" height="128" alt="Apple Say app icon" />
     <p class="hero-name">Apple Say</p>
@@ -70,6 +78,7 @@
     </div>
     <p class="fine-print muted">Free and open source · Requires macOS 14 Sonoma or later</p>
   </div>
+  <button class="hero-replay" type="button" hidden aria-label="Replay animation" title="Replay animation"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.46-3.54M13 2.5v2.5h-2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 </section>
 
 <!-- Timed Text -->
