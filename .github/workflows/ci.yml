@@ -21,11 +21,14 @@ jobs:
       - name: Install SwiftLint
         run: HOMEBREW_NO_AUTO_UPDATE=1 brew install swiftlint
 
-      - name: Run SwiftLint (Strict Mode)
-        run: swiftlint lint --strict
+      # SwiftLint only reads sources. The bundle build stays after the
+      # test so it reuses .build instead of compiling twice.
+      - parallel:
+          - name: Run SwiftLint (Strict Mode)
+            run: swiftlint lint --strict
 
-      - name: Run test suite (Zero Warnings)
-        run: swift test -Xswiftc -warnings-as-errors
+          - name: Run test suite (Zero Warnings)
+            run: swift test -Xswiftc -warnings-as-errors
 
       - name: Build application bundle
         run: ./scripts/build-app.sh
