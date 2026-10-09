@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.2](https://github.com/thedavidweng/apple-say/compare/v1.2.1...v1.2.2) (2026-10-09)
+
+
+### 📝 Documentation
+
+* **site:** replace the hero shrink with a spoken-line intro ([5e933b8](https://github.com/thedavidweng/apple-say/commit/5e933b81028401ffc879bd1fae69c8f271bef394))
+* **site:** serve the site at apple-say.blahaj.uk ([f9b39ba](https://github.com/thedavidweng/apple-say/commit/f9b39ba42debf4cbdaeadcdca9cb4847af323eee))
+
 ## [1.2.1](https://github.com/thedavidweng/apple-say/compare/v1.2.0...v1.2.1) (2026-10-01)
 
 
