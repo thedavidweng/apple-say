@@ -14,6 +14,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release:
     name: Build and Release
@@ -23,6 +27,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install SwiftLint
         run: HOMEBREW_NO_AUTO_UPDATE=1 brew install swiftlint
@@ -40,14 +46,18 @@ jobs:
       - name: Determine tag name
         id: vars
         run: |
-          if [ -n "${{ github.event.inputs.tag_name }}" ]; then
-            echo "tag=${{ github.event.inputs.tag_name }}" >> "$GITHUB_OUTPUT"
+          if [ -n "${INPUTS_TAG_NAME}" ]; then
+            echo "tag=${INPUTS_TAG_NAME}" >> "$GITHUB_OUTPUT"
           else
             echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
           fi
+        env:
+          INPUTS_TAG_NAME: ${{ github.event.inputs.tag_name }}
 
+      # v3.0.3 reuses the release created by release-please and supports rerun uploads.
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        # v3.0.3; required create/update release semantics.
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # zizmor: ignore[superfluous-actions]
         with:
           tag_name: ${{ steps.vars.outputs.tag }}
           files: |
