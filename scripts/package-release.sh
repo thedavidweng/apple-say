@@ -1,6 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
+: "${APPLE_SIGNING_IDENTITY:?release signing identity required}"
+: "${APPLE_SIGNING_KEYCHAIN:?}" "${APPLE_TEAM_ID:?}"
+: "${APPLE_API_KEY_PATH:?}" "${APPLE_API_KEY_ID:?}" "${APPLE_API_ISSUER:?}"
+
 project_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$project_root"
 
@@ -8,6 +12,7 @@ echo "==> Building Apple Say.app..."
 "$project_root/scripts/build-app.sh"
 
 application="$project_root/build/Apple Say.app"
+"$project_root/scripts/sign-and-notarize.sh" "$application"
 dist_dir="$project_root/dist"
 rm -rf "$dist_dir"
 mkdir -p "$dist_dir"
@@ -35,6 +40,8 @@ rm -rf "$dmg_staging"
 cd "$dist_dir"
 ln -s Apple-Say.dmg Apple-Say-macOS.dmg
 ln -s Apple-Say.zip Apple-Say-macOS.zip
+
+"$project_root/scripts/sign-and-notarize.sh" "$dist_dir/Apple-Say.dmg"
 
 echo "==> Generating SHA-256 checksums..."
 if command -v shasum >/dev/null 2>&1; then

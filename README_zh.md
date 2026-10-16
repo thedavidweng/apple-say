@@ -123,6 +123,8 @@ swift test
 ./scripts/package-release.sh
 ```
 
+发布打包需要 Developer ID 签名与公证凭据：`APPLE_SIGNING_IDENTITY`、`APPLE_SIGNING_KEYCHAIN`、`APPLE_TEAM_ID`、`APPLE_API_KEY_PATH`、`APPLE_API_KEY_ID`、`APPLE_API_ISSUER`。Release 工作流从 GitHub secrets 的 `APPLE_CERTIFICATE_P12_BASE64` / `APPLE_CERTIFICATE_PASSWORD` 导入证书，从 `APPLE_API_KEY_BASE64` 导入 API 密钥。开发构建仍可使用 `scripts/build-app.sh`。
+
 ---
 
 ## 🛡️ 隐私与系统权限

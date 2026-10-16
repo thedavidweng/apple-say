@@ -123,6 +123,8 @@ swift test
 ./scripts/package-release.sh
 ```
 
+Release packaging requires Developer ID signing and notarization credentials: `APPLE_SIGNING_IDENTITY`, `APPLE_SIGNING_KEYCHAIN`, `APPLE_TEAM_ID`, `APPLE_API_KEY_PATH`, `APPLE_API_KEY_ID`, and `APPLE_API_ISSUER`. The Release workflow imports the certificate from `APPLE_CERTIFICATE_P12_BASE64` / `APPLE_CERTIFICATE_PASSWORD` and the API key from `APPLE_API_KEY_BASE64` GitHub secrets. Development builds remain available through `scripts/build-app.sh`.
+
 ---
 
 ## 🛡️ Privacy & Permissions
