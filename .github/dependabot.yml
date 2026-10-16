@@ -16,7 +16,7 @@ updates:
           - "minor"
           - "patch"
     cooldown:
-      default-days: 5
+      default-days: 7
   - package-ecosystem: "swift"
     directory: "/"
     schedule:
@@ -24,4 +24,4 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     cooldown:
-      default-days: 5
+      default-days: 7
