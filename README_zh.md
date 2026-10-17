@@ -58,8 +58,7 @@ brew upgrade --cask apple-say
 3. 从启动台或聚焦搜索打开应用。
 
 > [!NOTE]
-> 预编译版本采用临时签名（ad-hoc signed）。首次打开若遇 Gatekeeper 安全提示，右键 **Apple Say.app** 选择 **“打开”**，或在终端执行：
-> `xattr -cr "/Applications/Apple Say.app"`
+> 从 v1.2.3 起，正式发行版使用 Developer ID 签名并通过 Apple 公证。
 
 ---
 

@@ -58,8 +58,7 @@ brew upgrade --cask apple-say
 3. Launch from Applications or Spotlight.
 
 > [!NOTE]
-> Releases use ad-hoc signing. If Gatekeeper blocks launch, right-click **Apple Say.app** and select **Open**, or run:
-> `xattr -cr "/Applications/Apple Say.app"`
+> From v1.2.3, official releases are signed with Developer ID and notarized by Apple.
 
 ---
 
