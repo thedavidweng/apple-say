@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.3](https://github.com/thedavidweng/apple-say/compare/v1.2.2...v1.2.3) (2026-10-17)
+
+
+### 🐛 Bug Fixes
+
+* **release:** expose signing keychain to codesign ([#33](https://github.com/thedavidweng/apple-say/issues/33)) ([25d0ca7](https://github.com/thedavidweng/apple-say/commit/25d0ca7362ead117f31590e34d4e926328131e19))
+* **release:** require Developer ID signing and notarization ([#31](https://github.com/thedavidweng/apple-say/issues/31)) ([ee83c10](https://github.com/thedavidweng/apple-say/commit/ee83c1051bc76a2f148e720f1d4683b704a5be90))
+
 ## [1.2.2](https://github.com/thedavidweng/apple-say/compare/v1.2.1...v1.2.2) (2026-10-09)
 
 
