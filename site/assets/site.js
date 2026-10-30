@@ -169,7 +169,7 @@
     anim(sheen, [{ transform: "translateX(-60%)" }, { transform: "translateX(60%)" }],
       { duration: 1200, delay: 3100, easing: "cubic-bezier(.45,0,.2,1)", pseudoElement: "::after" });
     copy.forEach(function (c, i) {
-      anim(c, [{ opacity: 0, transform: "translateY(18px)" }, { opacity: 1, transform: "none" }],
+      anim(c, [{ transform: "translateY(18px)" }, { transform: "none" }],
         { duration: 900, delay: 3300 + i * 110, easing: "cubic-bezier(.2,.7,.3,1)" });
     });
 
