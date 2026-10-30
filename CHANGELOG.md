@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.5](https://github.com/thedavidweng/apple-say/compare/v1.2.4...v1.2.5) (2026-10-30)
+
+
+### 🐛 Bug Fixes
+
+* improve website accessibility and performance ([#41](https://github.com/thedavidweng/apple-say/issues/41)) ([b395ed2](https://github.com/thedavidweng/apple-say/commit/b395ed245a4d816e1c594db1a1c9a9bf836ad593))
+
+
+### ⚡ Performance
+
+* serve responsive landing page images ([#43](https://github.com/thedavidweng/apple-say/issues/43)) ([bd0e410](https://github.com/thedavidweng/apple-say/commit/bd0e41022194faf385c01c2ccb28f26a1f3d5319))
+
 ## [1.2.4](https://github.com/thedavidweng/apple-say/compare/v1.2.3...v1.2.4) (2026-10-17)
 
 
