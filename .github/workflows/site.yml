@@ -42,8 +42,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          sudo apt-get update && sudo apt-get install -y webp
           cp public/screenshot.webp site/assets/screenshot.webp
-          cp Resources/AppIcon.webp site/assets/icon.webp
+          cwebp -quiet -resize 800 0 -q 70 public/screenshot.webp -o site/assets/screenshot-800.webp
+          cwebp -quiet -resize 1400 0 -q 65 public/screenshot.webp -o site/assets/screenshot-1400.webp
+          cwebp -quiet -resize 256 0 -q 82 Resources/AppIcon.webp -o site/assets/icon-256.webp
           TAG=$(gh api "repos/${{ github.repository }}/releases/latest" --jq .tag_name || git describe --tags --abbrev=0)
           echo "Injecting version: $TAG"
           sed -i "s/{{APP_VERSION}}/${TAG#v}/g" site/index.html site/zh/index.html
